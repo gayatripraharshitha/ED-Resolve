@@ -2934,17 +2934,10 @@
         return;
       }
 
-      const preferredLight =
-        window.matchMedia &&
-        window.matchMedia(
-          "(prefers-color-scheme: light)"
-        ).matches;
-
-      applyTheme(
-        preferredLight
-          ? "light"
-          : "dark"
-      );
+      // Keep the published/demo view dark by default so screenshots and
+      // recordings remain visually consistent. Users can still switch
+      // to light mode with the theme button.
+      applyTheme("dark");
 
     })();
 
