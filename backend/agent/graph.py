@@ -179,6 +179,26 @@ def error_node(
     return handle_agent_error(state)
 
 
+def safe_mode_node(
+    state: EDResolveState,
+) -> dict[str, Any]:
+    return {
+        "audit_log": [
+            {
+                "stage": "safe_mode",
+                "message": (
+                    "Autonomous action withheld; "
+                    "human review required."
+                ),
+                "data": state.get(
+                    "safe_mode",
+                    {},
+                ),
+            }
+        ]
+    }
+
+
 # ---------------------------------------------------------------------------
 # Routing
 # ---------------------------------------------------------------------------
@@ -260,10 +280,14 @@ def route_counterfactuals(
 def route_decision(
     state: EDResolveState,
 ) -> str:
-    return _route(
-        state,
-        "execution",
-    )
+
+    if state.get("error"):
+        return "error"
+
+    if state.get("safe_mode"):
+        return "safe_mode"
+
+    return "execution"
 
 
 def route_execution(
@@ -354,6 +378,11 @@ def build_agent_graph():
     graph.add_node(
         "decision",
         decision_node,
+    )
+
+    graph.add_node(
+        "safe_mode",
+        safe_mode_node,
     )
 
     graph.add_node(
@@ -490,8 +519,14 @@ def build_agent_graph():
         route_decision,
         {
             "execution": "execution",
+            "safe_mode": "safe_mode",
             "error": "error",
         },
+    )
+
+    graph.add_edge(
+        "safe_mode",
+        END,
     )
 
     # ---------------------------------------------------------

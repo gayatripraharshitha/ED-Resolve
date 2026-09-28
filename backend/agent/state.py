@@ -188,6 +188,10 @@ class DecisionRecord(BaseModel):
         default_factory=list
     )
 
+    experience_applicability: dict[str, Any] = Field(
+        default_factory=dict
+    )
+
     experience_support: dict[str, float] = Field(
         default_factory=dict
     )
@@ -256,6 +260,7 @@ class EDResolveState(TypedDict, total=False):
     # Hindsight
     memory_query: str
     recalled_experiences: list[dict[str, Any]]
+    experience_applicability: dict[str, Any]
     reflection: str
 
     # Candidate generation
@@ -269,6 +274,9 @@ class EDResolveState(TypedDict, total=False):
 
     # Decision
     decision: DecisionRecord
+
+    # Safe autonomy fallback
+    safe_mode: dict[str, Any]
 
     # Actual selected-action execution
     simulated_outcome: EpisodeOutcome

@@ -746,6 +746,357 @@ def build_memory_query(
 
 
 # ---------------------------------------------------------------------------
+# Experience Applicability Gate
+# ---------------------------------------------------------------------------
+
+def assess_experience_applicability(
+    state: EDResolveState,
+    experiences: list[dict[str, Any]],
+) -> dict[str, Any]:
+
+    raw_state = state.get(
+        "raw_state"
+    )
+
+    bottleneck = state.get(
+        "bottleneck"
+    )
+
+    world_model = state.get(
+        "world_model"
+    )
+
+    scenario = (
+        raw_state.scenario_type
+        if raw_state is not None
+        else ""
+    ).upper()
+
+    bottleneck_type = (
+        bottleneck.bottleneck_type
+        if bottleneck is not None
+        else ""
+    ).upper()
+
+    graph_dependency = (
+        world_model.graph_dominant_dependency
+        if world_model is not None
+        else ""
+    ).upper()
+
+    scenario_token = scenario.lower()
+    bottleneck_token = bottleneck_type.lower()
+    graph_token = graph_dependency.lower()
+
+    per_memory: dict[str, float] = {}
+    relevance_by_memory: dict[str, float] = {}
+
+    weighted_scores: list[tuple[float, float]] = []
+
+    aligned_count = 0
+    bottleneck_matches = 0
+    scenario_matches = 0
+    graph_matches = 0
+
+    for memory in experiences:
+
+        if not isinstance(
+            memory,
+            dict,
+        ):
+            continue
+
+        metadata = memory.get(
+            "metadata",
+            {},
+        )
+
+        if not isinstance(
+            metadata,
+            dict,
+        ):
+            metadata = {}
+
+        memory_type = str(
+            metadata.get(
+                "memory_type",
+                "",
+            )
+        )
+
+        if memory_type != "resolution_experience":
+            continue
+
+        memory_id = str(
+            memory.get(
+                "id",
+                "",
+            )
+        )
+
+        if not memory_id:
+            continue
+
+        scores = memory.get(
+            "scores",
+            {},
+        )
+
+        if not isinstance(
+            scores,
+            dict,
+        ):
+            scores = {}
+
+        relevance = scores.get(
+            "reranker",
+            scores.get(
+                "semantic",
+                scores.get(
+                    "final",
+                    0.0,
+                ),
+            ),
+        )
+
+        try:
+            relevance = float(
+                relevance
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            relevance = 0.0
+
+        # Normalize relevance to [0, 1].
+        relevance = max(
+            0.0,
+            min(
+                1.0,
+                relevance,
+            ),
+        )
+
+        text = str(
+            memory.get(
+                "text",
+                "",
+            )
+        ).lower()
+
+        tags = memory.get(
+            "tags",
+            [],
+        )
+
+        if not isinstance(
+            tags,
+            list,
+        ):
+            tags = []
+
+        normalized_tags = {
+            str(tag).lower()
+            for tag in tags
+        }
+
+        memory_bottleneck = str(
+            metadata.get(
+                "bottleneck_type",
+                "",
+            )
+        ).lower()
+
+        bottleneck_match = (
+            1.0
+            if (
+                bottleneck_token
+                and (
+                    memory_bottleneck
+                    == bottleneck_token
+                    or bottleneck_token in text
+                    or bottleneck_token in normalized_tags
+                )
+            )
+            else 0.0
+        )
+
+        scenario_match = (
+            1.0
+            if (
+                scenario_token
+                and (
+                    scenario_token in text
+                    or scenario_token
+                    in normalized_tags
+                )
+            )
+            else 0.0
+        )
+
+        if bottleneck_match > 0:
+            bottleneck_matches += 1
+
+        if scenario_match > 0:
+            scenario_matches += 1
+
+        graph_match = (
+            1.0
+            if (
+                graph_token
+                and (
+                    graph_token in text
+                    or graph_token
+                    in normalized_tags
+                    or graph_token.replace(
+                        "_",
+                        " ",
+                    )
+                    in text
+                )
+            )
+            else 0.0
+        )
+
+        if graph_match > 0:
+            graph_matches += 1
+
+        # Graph-token overlap is supporting evidence only.
+        # It must not make an otherwise unseen regime appear familiar.
+        structurally_aligned = (
+            bottleneck_match > 0
+            or scenario_match > 0
+        )
+
+        applicability = (
+            0.55 * relevance
+            + 0.20 * bottleneck_match
+            + 0.15 * scenario_match
+            + 0.10 * graph_match
+        )
+
+        if not structurally_aligned:
+            applicability = 0.0
+
+        applicability = max(
+            0.0,
+            min(
+                1.0,
+                applicability,
+            ),
+        )
+
+        per_memory[memory_id] = round(
+            applicability,
+            4,
+        )
+
+        relevance_by_memory[memory_id] = round(
+            relevance,
+            4,
+        )
+
+        weighted_scores.append(
+            (
+                applicability,
+                max(
+                    0.1,
+                    relevance,
+                ),
+            )
+        )
+
+        if (
+            bottleneck_match > 0
+            or scenario_match > 0
+        ):
+            aligned_count += 1
+
+    if not weighted_scores:
+
+        global_score = 0.0
+
+    else:
+
+        denominator = sum(
+            weight
+            for _, weight
+            in weighted_scores
+        )
+
+        global_score = (
+            sum(
+                score * weight
+                for score, weight
+                in weighted_scores
+            )
+            / denominator
+        )
+
+    global_score = max(
+        0.0,
+        min(
+            1.0,
+            global_score,
+        ),
+    )
+
+    # Semantic similarity alone must not make an operationally
+    # unseen regime look highly applicable.
+    structurally_unseen = (
+        bottleneck_matches == 0
+        and scenario_matches == 0
+    )
+
+    if structurally_unseen:
+        global_score = min(
+            global_score,
+            0.25,
+        )
+
+    if global_score >= 0.75:
+
+        mode = "HIGH"
+
+        prior_scale = 1.0
+
+    elif global_score >= 0.45:
+
+        mode = "MEDIUM"
+
+        prior_scale = 0.5
+
+    else:
+
+        mode = "LOW"
+
+        prior_scale = 0.0
+
+    return {
+        "global_score": round(
+            global_score,
+            4,
+        ),
+        "mode": mode,
+        "prior_scale": prior_scale,
+        "memory_count": len(
+            per_memory
+        ),
+        "aligned_memory_count": aligned_count,
+        "bottleneck_matches": bottleneck_matches,
+        "scenario_matches": scenario_matches,
+        "graph_matches": graph_matches,
+        "structurally_unseen": structurally_unseen,
+        "bottleneck": bottleneck_type,
+        "scenario": scenario,
+        "graph_dependency": graph_dependency,
+        "per_memory": per_memory,
+        "relevance_by_memory": relevance_by_memory,
+    }
+
+
+# ---------------------------------------------------------------------------
 # 4. Hindsight Recall
 # ---------------------------------------------------------------------------
 
@@ -830,9 +1181,20 @@ def recall_experiences(
                     }
                 )
 
+        applicability = (
+            assess_experience_applicability(
+                state,
+                experiences,
+            )
+        )
+
         return {
             "recalled_experiences": (
                 experiences
+            ),
+
+            "experience_applicability": (
+                applicability
             ),
 
             "audit_log": [
@@ -890,6 +1252,11 @@ def generate_candidate_actions(
         memories
     )
 
+    experience_applicability = state.get(
+        "experience_applicability",
+        {},
+    )
+
     user_prompt = f"""
 CURRENT WORLD MODEL
 -------------------
@@ -902,6 +1269,15 @@ BOTTLENECK
 HISTORICAL EXPERIENCES
 ---------------------
 {memory_context}
+
+EXPERIENCE APPLICABILITY GATE
+-----------------------------
+{experience_applicability}
+
+Interpretation:
+- HIGH: historical experience is strongly aligned with the current operational state.
+- MEDIUM: historical experience is partially aligned and should be treated cautiously.
+- LOW: historical experience is not sufficiently applicable; do not treat it as strong evidence.
 
 TASK
 ----

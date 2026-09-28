@@ -610,6 +610,38 @@ class EDTransferSimulator:
             action,
         )
 
+        # An action must have an explicit operational pathway in the
+        # simulator. An unsupported/unknown regime must not become an
+        # instant successful transfer merely because all simulated
+        # durations are zero.
+        has_resolution_path = (
+            plan["alternative_destination"]
+            or plan["bed_time"] > 0
+            or plan["transport_time"] > 0
+            or plan["coordination_time"] > 0
+        )
+
+        if not has_resolution_path:
+            return EpisodeOutcome(
+                case_id=case.case_id,
+                action=action,
+                resolved=False,
+                resolution_time=None,
+                boarding_time=self.config.max_simulation_time,
+                escalation_count=plan["escalations"],
+                resource_conflicts=1,
+                initial_state=initial_state.snapshot(),
+                final_state=state.snapshot(),
+                events=[
+                    {
+                        "time": 0.0,
+                        "event": "no_resolution_path",
+                        "action": action,
+                        "scenario_type": state.scenario_type,
+                    }
+                ],
+            )
+
         state.escalation_count += (
             plan["escalations"]
         )

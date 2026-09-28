@@ -608,6 +608,18 @@ def select_action(
         [],
     )
 
+    experience_applicability = state.get(
+        "experience_applicability",
+        {},
+    )
+
+    prior_scale = float(
+        experience_applicability.get(
+            "prior_scale",
+            0.0,
+        )
+    )
+
     if not results:
         raise ValueError(
             "No counterfactual results available."
@@ -620,10 +632,125 @@ def select_action(
         and result.utility_score is not None
     ]
 
-    if not feasible_results:
-        raise RuntimeError(
-            "No feasible intervention survived constraint validation."
+    experience_applicability = state.get(
+        "experience_applicability",
+        {},
+    )
+
+    applicability_mode = str(
+        experience_applicability.get(
+            "mode",
+            "HIGH",
         )
+    ).upper()
+
+    # In a LOW-applicability regime, WAIT is not treated as a
+    # meaningful autonomous resolution when it is the only
+    # feasible option. Withhold autonomy and require review.
+    if (
+        feasible_results
+        and applicability_mode == "LOW"
+        and len(feasible_results) == 1
+        and feasible_results[0].action == "WAIT"
+    ):
+        return {
+            "safe_mode": {
+                "active": True,
+                "reason": (
+                    "The current operational regime is outside "
+                    "the system's experiential support and WAIT "
+                    "is the only feasible action."
+                ),
+                "message": (
+                    "Autonomous action withheld. "
+                    "Human review required."
+                ),
+                "experience_applicability": (
+                    experience_applicability
+                ),
+                "candidate_count": len(candidates),
+                "feasible_count": len(
+                    feasible_results
+                ),
+            },
+            "audit_log": [
+                _audit(
+                    stage="safe_mode",
+                    message=(
+                        "Autonomy withheld for a low-applicability "
+                        "regime with no meaningful intervention."
+                    ),
+                    data={
+                        "experience_applicability": (
+                            experience_applicability
+                        ),
+                        "candidate_count": len(candidates),
+                        "feasible_count": len(
+                            feasible_results
+                        ),
+                    },
+                )
+            ],
+            "error": None,
+        }
+
+    if not feasible_results:
+        constraint_feasible_count = sum(
+            1
+            for result in constraints
+            if result.feasible
+        )
+
+        if constraint_feasible_count > 0:
+            safe_reason = (
+                "Current-state counterfactual simulation "
+                "found no executable resolution pathway."
+            )
+            failure_layer = "simulation"
+        else:
+            safe_reason = (
+                "No feasible intervention survived "
+                "hard operational constraints."
+            )
+            failure_layer = "constraints"
+
+        return {
+            "safe_mode": {
+                "active": True,
+                "reason": safe_reason,
+                "message": (
+                    "Autonomous action withheld. "
+                    "Human review required."
+                ),
+                "experience_applicability": (
+                    experience_applicability
+                ),
+                "candidate_count": len(candidates),
+                "feasible_count": 0,
+                "failure_layer": failure_layer,
+                "constraint_feasible_count": (
+                    constraint_feasible_count
+                ),
+            },
+            "audit_log": [
+                _audit(
+                    stage="safe_mode",
+                    message=(
+                        "Autonomous action withheld because "
+                        "no candidate intervention satisfied "
+                        "the hard operational constraints."
+                    ),
+                    data={
+                        "experience_applicability": (
+                            experience_applicability
+                        ),
+                        "candidate_count": len(candidates),
+                        "feasible_count": 0,
+                    },
+                )
+            ],
+            "error": None,
+        }
 
     feasible_actions = [
         result.action
@@ -676,14 +803,21 @@ def select_action(
                 - minimum_utility
             ) / utility_range
 
+        raw_support = experience_support.get(
+            result.action,
+            0.0,
+        )
+
+        effective_support = (
+            raw_support
+            * prior_scale
+        )
+
         memory_penalty = (
             EXPERIENCE_PRIOR_WEIGHT
             * (
                 1.0
-                - experience_support.get(
-                    result.action,
-                    0.0,
-                )
+                - effective_support
             )
         )
 
@@ -763,7 +897,12 @@ def select_action(
         f"Current-state simulation utility was "
         f"{selected.utility_score:.2f}. "
         f"Historical experience support for this action was "
-        f"{selected_support:.3f}."
+        f"{selected_support:.3f}. "
+        f"Experience applicability was "
+        f"{experience_applicability.get('mode', 'LOW')} "
+        f"({experience_applicability.get('global_score', 0.0):.3f}), "
+        f"with prior scale "
+        f"{prior_scale:.2f}."
     )
 
     decision = DecisionRecord(
@@ -773,6 +912,9 @@ def select_action(
         alternatives_considered=alternatives_considered,
         rejected_actions=rejected_actions,
         memory_ids_used=evidence_memory_ids,
+        experience_applicability=(
+            experience_applicability
+        ),
         experience_support={
             action: round(
                 value,
@@ -811,6 +953,9 @@ def select_action(
                     "selected_utility": selected.utility_score,
                     "selected_adjusted_score": (
                         adjusted_scores[selected_action]
+                    ),
+                    "experience_applicability": (
+                        experience_applicability
                     ),
                     "experience_support": (
                         experience_support
