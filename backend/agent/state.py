@@ -4,7 +4,10 @@ from typing import Any, TypedDict
 
 from pydantic import BaseModel, Field
 
-from backend.simulation.models import EDOperationalState, EpisodeOutcome
+from backend.simulation.models import (
+    EDOperationalState,
+    EpisodeOutcome,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -13,13 +16,25 @@ from backend.simulation.models import EDOperationalState, EpisodeOutcome
 
 class BottleneckFingerprint(BaseModel):
     bottleneck_type: str
+
     capacity_pressure: float = 0.0
     transport_pressure: float = 0.0
     coordination_pressure: float = 0.0
     process_delay: float = 0.0
     resource_conflict: float = 0.0
+
     confidence: float = 0.0
+
     dominant_dependency: str = "UNKNOWN"
+
+    # NetworkX-derived structural signals.
+    graph_dominant_dependency: str = "UNKNOWN"
+    graph_criticality: float = 0.0
+    graph_centrality: float = 0.0
+
+    critical_path: list[str] = Field(
+        default_factory=list
+    )
 
 
 class WorldModelSnapshot(BaseModel):
@@ -42,8 +57,24 @@ class WorldModelSnapshot(BaseModel):
 
     current_time: float
 
-    graph_nodes: list[str] = Field(default_factory=list)
-    graph_edges: list[str] = Field(default_factory=list)
+    # Operational dependency graph.
+    graph_nodes: list[str] = Field(
+        default_factory=list
+    )
+
+    graph_edges: list[str] = Field(
+        default_factory=list
+    )
+
+    graph_dominant_dependency: str = "UNKNOWN"
+
+    graph_criticality: dict[str, float] = Field(
+        default_factory=dict
+    )
+
+    critical_path: list[str] = Field(
+        default_factory=list
+    )
 
     process_variant: str = ""
 
