@@ -1,0 +1,3737 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>ED Resolve | GEOMETROGENESIS</title>
+
+  <style>
+
+    /* =========================================================
+       DESIGN SYSTEM
+       ========================================================= */
+
+    :root {
+
+      --bg:
+        #07101c;
+
+      --bg-soft:
+        #0b1524;
+
+      --surface:
+        #0e1929;
+
+      --surface-2:
+        #111e31;
+
+      --surface-3:
+        #14243a;
+
+      --border:
+        #24334a;
+
+      --border-soft:
+        rgba(148, 163, 184, 0.13);
+
+      --text:
+        #f7f9fc;
+
+      --text-soft:
+        #d9e1ed;
+
+      --muted:
+        #8fa0b7;
+
+      --muted-2:
+        #64748b;
+
+      --primary:
+        #6d5ef6;
+
+      --primary-2:
+        #887cff;
+
+      --cyan:
+        #4ab8ff;
+
+      --success:
+        #23c483;
+
+      --warning:
+        #72b7ff;
+
+      --danger:
+        #ef6077;
+
+      --shadow:
+        0 22px 70px rgba(0, 0, 0, .30);
+
+      --shadow-small:
+        0 10px 30px rgba(0, 0, 0, .18);
+    }
+
+
+    /* =========================================================
+       LIGHT MODE
+       ========================================================= */
+
+    body.light {
+
+      --bg:
+        #f3f6fa;
+
+      --bg-soft:
+        #eef3f8;
+
+      --surface:
+        #ffffff;
+
+      --surface-2:
+        #f8fafc;
+
+      --surface-3:
+        #f1f5f9;
+
+      --border:
+        #dce5ef;
+
+      --border-soft:
+        rgba(51, 65, 85, 0.10);
+
+      --text:
+        #132238;
+
+      --text-soft:
+        #26384e;
+
+      --muted:
+        #63748a;
+
+      --muted-2:
+        #8290a3;
+
+      --primary:
+        #5b4fe9;
+
+      --primary-2:
+        #6d5ef6;
+
+      --cyan:
+        #1688d3;
+
+      --success:
+        #159a63;
+
+      --warning:
+        #1688d3;
+
+      --danger:
+        #d6455d;
+
+      --shadow:
+        0 18px 55px rgba(31, 41, 55, .08);
+
+      --shadow-small:
+        0 10px 28px rgba(31, 41, 55, .06);
+    }
+
+
+    /* =========================================================
+       GLOBAL
+       ========================================================= */
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+
+      margin: 0;
+
+      min-height: 100vh;
+
+      color:
+        var(--text);
+
+      background:
+        radial-gradient(
+          900px 450px at 5% -10%,
+          rgba(109, 94, 246, .15),
+          transparent 62%
+        ),
+        radial-gradient(
+          850px 420px at 100% 0%,
+          rgba(74, 184, 255, .08),
+          transparent 60%
+        ),
+        linear-gradient(
+          180deg,
+          var(--bg-soft),
+          var(--bg)
+        );
+
+      font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+      transition:
+        background .25s ease,
+        color .25s ease;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    button:focus-visible {
+      outline:
+        2px solid var(--primary-2);
+
+      outline-offset:
+        2px;
+    }
+
+    .shell {
+
+      width:
+        min(1580px, calc(100% - 36px));
+
+      margin:
+        0 auto;
+
+      padding:
+        24px 0 36px;
+    }
+
+
+    /* =========================================================
+       SIMPLE EXPLANATORY PIPELINE
+       ========================================================= */
+
+    .plain-pipeline {
+      margin-bottom: 12px;
+    }
+
+    .pipeline-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .pipeline-step {
+      display: flex;
+      gap: 9px;
+      align-items: flex-start;
+      padding: 11px 12px;
+      border: 1px solid var(--border-soft);
+      border-radius: 12px;
+      background: rgba(255,255,255,.018);
+    }
+
+    .pipeline-num {
+      width: 24px;
+      height: 24px;
+      flex: 0 0 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary), var(--cyan));
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .pipeline-step strong {
+      display: block;
+      font-size: 12px;
+      line-height: 1.2;
+      font-weight: 800;
+    }
+
+    .pipeline-step small {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.35;
+    }
+
+    .panel-title {
+      font-size: 16px;
+    }
+
+    .section .panel-title {
+      font-size: 18px;
+    }
+
+    @media (max-width: 1150px) {
+      .pipeline-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 700px) {
+      .pipeline-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+
+    /* =========================================================
+       HEADER
+       ========================================================= */
+
+    .topbar {
+
+      display:
+        flex;
+
+      align-items:
+        center;
+
+      justify-content:
+        space-between;
+
+      gap:
+        20px;
+
+      margin-bottom:
+        15px;
+    }
+
+    .brand {
+
+      display:
+        flex;
+
+      align-items:
+        center;
+
+      gap:
+        13px;
+    }
+
+    .brand-mark {
+
+      width:
+        46px;
+
+      height:
+        46px;
+
+      border-radius:
+        14px;
+
+      display:
+        grid;
+
+      place-items:
+        center;
+
+      color:
+        white;
+
+      font-size:
+        14px;
+
+      font-weight:
+        900;
+
+      background:
+        linear-gradient(
+          135deg,
+          #7b6eff,
+          #596cf4 55%,
+          #42b9f4
+        );
+
+      box-shadow:
+        0 12px 30px
+        rgba(93, 108, 244, .27),
+
+        inset 0 1px 0
+        rgba(255,255,255,.25);
+    }
+
+    .team {
+
+      font-size:
+        10px;
+
+      font-weight:
+        900;
+
+      letter-spacing:
+        .23em;
+
+      color:
+        var(--primary-2);
+    }
+
+    .project {
+
+      margin-top:
+        3px;
+
+      font-size:
+        25px;
+
+      line-height:
+        1.05;
+
+      font-weight:
+        900;
+
+      letter-spacing:
+        -.8px;
+    }
+
+    .descriptor {
+
+      margin-top:
+        4px;
+
+      color:
+        var(--muted);
+
+      font-size:
+        11px;
+    }
+
+    .header-actions {
+
+      display:
+        flex;
+
+      align-items:
+        center;
+
+      gap:
+        8px;
+
+      flex-wrap:
+        wrap;
+
+      justify-content:
+        flex-end;
+    }
+
+    .header-button {
+
+      padding:
+        9px 12px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius:
+        10px;
+
+      background:
+        rgba(255,255,255,.025);
+
+      color:
+        var(--text-soft);
+
+      cursor:
+        pointer;
+
+      transition:
+        .18s ease;
+    }
+
+    .header-button:hover {
+
+      transform:
+        translateY(-1px);
+
+      border-color:
+        rgba(109,94,246,.45);
+
+      background:
+        rgba(109,94,246,.08);
+    }
+
+    .header-button.active {
+
+      color:
+        white;
+
+      border-color:
+        rgba(109,94,246,.55);
+
+      background:
+        rgba(109,94,246,.13);
+    }
+
+    body.light
+    .header-button.active {
+      color:
+        #4539bf;
+    }
+
+    .live-status {
+
+      display:
+        inline-flex;
+
+      align-items:
+        center;
+
+      gap:
+        7px;
+
+      padding:
+        8px 11px;
+
+      border:
+        1px solid
+        rgba(35,196,131,.18);
+
+      border-radius:
+        999px;
+
+      background:
+        rgba(35,196,131,.07);
+
+      color:
+        var(--success);
+
+      font-size:
+        10px;
+
+      font-weight:
+        850;
+
+      letter-spacing:
+        .04em;
+    }
+
+    .live-dot {
+
+      width:
+        7px;
+
+      height:
+        7px;
+
+      border-radius:
+        50%;
+
+      background:
+        var(--success);
+
+      box-shadow:
+        0 0 14px
+        rgba(35,196,131,.65);
+    }
+
+
+    /* =========================================================
+       HERO
+       ========================================================= */
+
+    .hero {
+
+      display:
+        grid;
+
+      grid-template-columns:
+        minmax(0, 1.25fr)
+        minmax(280px, .75fr);
+
+      gap:
+        14px;
+
+      padding:
+        25px;
+
+      margin-bottom:
+        14px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius:
+        20px;
+
+      background:
+        radial-gradient(
+          650px 250px at 0% 0%,
+          rgba(109,94,246,.14),
+          transparent 64%
+        ),
+        linear-gradient(
+          135deg,
+          var(--surface-2),
+          var(--surface)
+        );
+
+      box-shadow:
+        var(--shadow);
+    }
+
+    .hero-title {
+
+      font-size:
+        clamp(26px, 3.4vw, 40px);
+
+      font-weight:
+        950;
+
+      letter-spacing:
+        -1.7px;
+
+      line-height:
+        1.02;
+    }
+
+    .hero-subtitle {
+
+      max-width:
+        780px;
+
+      margin-top:
+        10px;
+
+      color:
+        var(--muted);
+
+      font-size:
+        12.5px;
+
+      line-height:
+        1.6;
+    }
+
+    .hero-tags {
+
+      display:
+        flex;
+
+      flex-wrap:
+        wrap;
+
+      gap:
+        7px;
+
+      margin-top:
+        16px;
+    }
+
+    .hero-tag {
+
+      padding:
+        6px 9px;
+
+      border:
+        1px solid
+        rgba(109,94,246,.14);
+
+      border-radius:
+        999px;
+
+      color:
+        #c6c0ff;
+
+      background:
+        rgba(109,94,246,.08);
+
+      font-size:
+        9px;
+
+      font-weight:
+        800;
+    }
+
+    body.light
+    .hero-tag {
+      color:
+        #5145c8;
+    }
+
+    .hero-message {
+
+      display:
+        flex;
+
+      flex-direction:
+        column;
+
+      justify-content:
+        center;
+
+      padding-left:
+        18px;
+
+      border-left:
+        1px solid var(--border);
+    }
+
+    .hero-kicker {
+
+      color:
+        var(--cyan);
+
+      font-size:
+        9px;
+
+      font-weight:
+        900;
+
+      letter-spacing:
+        .16em;
+    }
+
+    .hero-quote {
+
+      margin-top:
+        8px;
+
+      font-size:
+        16px;
+
+      font-weight:
+        800;
+
+      line-height:
+        1.5;
+    }
+
+
+    /* =========================================================
+       KPI ROW
+       ========================================================= */
+
+    .kpis {
+
+      display:
+        grid;
+
+      grid-template-columns:
+        repeat(4, 1fr);
+
+      gap:
+        11px;
+
+      margin-bottom:
+        12px;
+    }
+
+    .card {
+
+      border:
+        1px solid var(--border);
+
+      border-radius:
+        16px;
+
+      background:
+        linear-gradient(
+          180deg,
+          var(--surface-2),
+          var(--surface)
+        );
+
+      box-shadow:
+        var(--shadow-small);
+
+      transition:
+        border-color .18s ease,
+        box-shadow .18s ease;
+    }
+
+    .card:hover {
+
+      border-color:
+        rgba(109,94,246,.30);
+
+      box-shadow:
+        var(--shadow);
+    }
+
+    .kpi {
+
+      position:
+        relative;
+
+      overflow:
+        hidden;
+
+      padding:
+        16px 18px;
+    }
+
+    .kpi::before {
+
+      content:
+        "";
+
+      position:
+        absolute;
+
+      left:
+        0;
+
+      right:
+        0;
+
+      top:
+        0;
+
+      height:
+        2px;
+
+      background:
+        linear-gradient(
+          90deg,
+          transparent,
+          rgba(109,94,246,.75),
+          transparent
+        );
+    }
+
+    .eyebrow {
+
+      color:
+        var(--muted);
+
+      font-size:
+        9px;
+
+      font-weight:
+        850;
+
+      letter-spacing:
+        .12em;
+
+      text-transform:
+        uppercase;
+    }
+
+    .kpi-value {
+
+      margin-top:
+        8px;
+
+      font-size:
+        24px;
+
+      line-height:
+        1;
+
+      font-weight:
+        930;
+
+      letter-spacing:
+        -.6px;
+    }
+
+    .kpi-note {
+
+      margin-top:
+        6px;
+
+      color:
+        var(--muted);
+
+      font-size:
+        10px;
+    }
+
+    .success {
+      color:
+        var(--success);
+    }
+
+    .warning {
+      color:
+        var(--warning);
+    }
+
+    .danger {
+      color:
+        var(--danger);
+    }
+
+    .primary {
+      color:
+        var(--primary-2);
+    }
+
+
+    /* =========================================================
+       MAIN THREE-COLUMN AREA
+       ========================================================= */
+
+    .main-grid {
+
+      display:
+        grid;
+
+      grid-template-columns:
+        1.05fr .95fr .95fr;
+
+      gap:
+        12px;
+    }
+
+    .panel {
+
+      padding:
+        18px;
+
+      min-height:
+        285px;
+    }
+
+    .panel-head {
+
+      display:
+        flex;
+
+      align-items:
+        center;
+
+      justify-content:
+        space-between;
+
+      gap:
+        10px;
+
+      margin-bottom:
+        14px;
+    }
+
+    .panel-title {
+
+      margin:
+        0;
+
+      font-size:
+        11px;
+
+      font-weight:
+        900;
+
+      letter-spacing:
+        .1em;
+
+      text-transform:
+        uppercase;
+    }
+
+    .badge {
+
+      padding:
+        5px 8px;
+
+      border:
+        1px solid
+        rgba(109,94,246,.13);
+
+      border-radius:
+        7px;
+
+      color:
+        #c8c2ff;
+
+      background:
+        rgba(109,94,246,.08);
+
+      font-size:
+        8px;
+
+      font-weight:
+        900;
+
+      letter-spacing:
+        .07em;
+    }
+
+    body.light .badge {
+      color:
+        #5145c8;
+    }
+
+
+    /* =========================================================
+       WORLD MODEL
+       ========================================================= */
+
+    .flow {
+
+      display:
+        flex;
+
+      align-items:
+        center;
+
+      flex-wrap:
+        wrap;
+
+      gap:
+        7px;
+
+      margin-bottom:
+        17px;
+    }
+
+    .flow-node {
+
+      padding:
+        9px 10px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius:
+        9px;
+
+      color:
+        var(--text-soft);
+
+      background:
+        var(--surface-3);
+
+      font-size:
+        10px;
+
+      font-weight:
+        850;
+    }
+
+    .flow-node.hot {
+
+      color:
+        var(--warning);
+
+      border-color:
+        rgba(242,184,75,.30);
+
+      background:
+        rgba(242,184,75,.08);
+    }
+
+    .flow-arrow {
+
+      color:
+        var(--muted-2);
+
+      font-size:
+        14px;
+
+      font-weight:
+        900;
+    }
+
+    .data-row {
+
+      display:
+        flex;
+
+      justify-content:
+        space-between;
+
+      gap:
+        14px;
+
+      padding:
+        10px 0;
+
+      border-bottom:
+        1px solid
+        var(--border-soft);
+
+      font-size:
+        10px;
+    }
+
+    .data-row:last-child {
+      border-bottom:
+        0;
+    }
+
+    .data-row span:first-child {
+      color:
+        var(--muted);
+    }
+
+    .data-row strong {
+      text-align:
+        right;
+    }
+
+
+    /* =========================================================
+       MEMORY PANEL
+       ========================================================= */
+
+    .memory-score {
+
+      margin-top:
+        4px;
+
+      font-size:
+        42px;
+
+      line-height:
+        1;
+
+      font-weight:
+        950;
+
+      letter-spacing:
+        -1.6px;
+    }
+
+    .memory-bar {
+
+      height:
+        8px;
+
+      margin:
+        13px 0 15px;
+
+      overflow:
+        hidden;
+
+      border:
+        1px solid
+        var(--border-soft);
+
+      border-radius:
+        999px;
+
+      background:
+        var(--surface-3);
+    }
+
+    .memory-fill {
+
+      width:
+        0%;
+
+      height:
+        100%;
+
+      background:
+        linear-gradient(
+          90deg,
+          var(--primary),
+          var(--cyan)
+        );
+
+      box-shadow:
+        0 0 18px
+        rgba(74,184,255,.20);
+
+      transition:
+        width .35s ease;
+    }
+
+    .memory-description {
+
+      margin-top:
+        12px;
+
+      color:
+        var(--muted);
+
+      font-size:
+        10px;
+
+      line-height:
+        1.55;
+    }
+
+
+    /* =========================================================
+       DECISION PANEL
+       ========================================================= */
+
+    .decision-action {
+
+      font-size:
+        23px;
+
+      line-height:
+        1.08;
+
+      font-weight:
+        950;
+
+      letter-spacing:
+        -.5px;
+    }
+
+    .decision-reason {
+
+      margin-top:
+        11px;
+
+      color:
+        var(--muted);
+
+      font-size:
+        11px;
+
+      line-height:
+        1.55;
+    }
+
+    .status-pill {
+
+      display:
+        inline-flex;
+
+      margin-top:
+        14px;
+
+      padding:
+        6px 9px;
+
+      border:
+        1px solid transparent;
+
+      border-radius:
+        999px;
+
+      font-size:
+        9px;
+
+      font-weight:
+        900;
+
+      letter-spacing:
+        .05em;
+    }
+
+    .status-pill.good {
+
+      color:
+        #8bf0bd;
+
+      background:
+        rgba(35,196,131,.08);
+
+      border-color:
+        rgba(35,196,131,.15);
+    }
+
+    .status-pill.bad {
+
+      color:
+        #ff9bab;
+
+      background:
+        rgba(239,96,119,.08);
+
+      border-color:
+        rgba(239,96,119,.15);
+    }
+
+    .safe-mode {
+
+      margin-top:
+        17px;
+
+      padding:
+        16px;
+
+      border:
+        1px solid
+        rgba(239,96,119,.30);
+
+      border-radius:
+        13px;
+
+      background:
+        radial-gradient(
+          450px 150px at 0% 0%,
+          rgba(239,96,119,.09),
+          transparent 70%
+        ),
+        rgba(239,96,119,.035);
+    }
+
+    .safe-title {
+
+      color:
+        var(--danger);
+
+      font-size:
+        16px;
+
+      font-weight:
+        950;
+    }
+
+    .safe-copy {
+
+      margin-top:
+        6px;
+
+      color:
+        var(--muted);
+
+      font-size:
+        10px;
+
+      line-height:
+        1.5;
+    }
+
+    .hidden {
+      display:
+        none !important;
+    }
+
+
+    /* =========================================================
+       HINDSIGHT SIGNIFICANCE
+       ========================================================= */
+
+    .section {
+
+      margin-top:
+        12px;
+
+      padding:
+        18px;
+    }
+
+    .memory-grid {
+
+      display:
+        grid;
+
+      grid-template-columns:
+        repeat(4, 1fr);
+
+      gap:
+        10px;
+    }
+
+    .memory-step {
+
+      min-height:
+        130px;
+
+      padding:
+        15px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius:
+        13px;
+
+      background:
+        rgba(255,255,255,.015);
+    }
+
+    body.light .memory-step {
+      background:
+        #fbfcfe;
+    }
+
+    .memory-step-num {
+
+      color:
+        var(--primary-2);
+
+      font-size:
+        9px;
+
+      font-weight:
+        950;
+
+      letter-spacing:
+        .12em;
+    }
+
+    .memory-step-title {
+
+      margin-top:
+        12px;
+
+      font-size:
+        14px;
+
+      font-weight:
+        900;
+    }
+
+    .memory-step-text {
+
+      margin-top:
+        7px;
+
+      color:
+        var(--muted);
+
+      font-size:
+        10px;
+
+      line-height:
+        1.55;
+    }
+
+    .memory-callout {
+
+      margin-top:
+        11px;
+
+      padding:
+        13px 15px;
+
+      border-left:
+        3px solid var(--primary);
+
+      color:
+        var(--muted);
+
+      background:
+        rgba(109,94,246,.045);
+
+      font-size:
+        10px;
+
+      line-height:
+        1.55;
+    }
+
+
+    /* =========================================================
+       COUNTERFACTUAL TABLE
+       ========================================================= */
+
+    .table-wrap {
+      overflow-x:
+        auto;
+    }
+
+    table {
+
+      width:
+        100%;
+
+      border-collapse:
+        collapse;
+    }
+
+    th {
+
+      padding:
+        9px 8px;
+
+      text-align:
+        left;
+
+      color:
+        var(--muted-2);
+
+      border-bottom:
+        1px solid var(--border);
+
+      font-size:
+        8px;
+
+      text-transform:
+        uppercase;
+
+      letter-spacing:
+        .10em;
+    }
+
+    td {
+
+      padding:
+        11px 8px;
+
+      border-bottom:
+        1px solid
+        var(--border-soft);
+
+      font-size:
+        10px;
+    }
+
+    tr:last-child td {
+      border-bottom:
+        0;
+    }
+
+    tr:hover td {
+
+      background:
+        rgba(109,94,246,.025);
+    }
+
+    .table-good {
+
+      color:
+        var(--success);
+
+      font-weight:
+        850;
+    }
+
+    .table-bad {
+
+      color:
+        var(--danger);
+
+      font-weight:
+        850;
+    }
+
+
+    /* =========================================================
+       RESULT / EVIDENCE CARDS
+       ========================================================= */
+
+    .evidence-grid {
+
+      display:
+        grid;
+
+      grid-template-columns:
+        repeat(4, 1fr);
+
+      gap:
+        10px;
+    }
+
+    .evidence-card {
+
+      padding:
+        17px;
+
+      min-height:
+        135px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius:
+        13px;
+
+      background:
+        rgba(255,255,255,.015);
+    }
+
+    body.light .evidence-card {
+      background:
+        #fbfcfe;
+    }
+
+    .evidence-label {
+
+      color:
+        var(--muted);
+
+      font-size:
+        8px;
+
+      font-weight:
+        900;
+
+      letter-spacing:
+        .13em;
+    }
+
+    .evidence-value {
+
+      margin-top:
+        12px;
+
+      font-size:
+        28px;
+
+      font-weight:
+        950;
+
+      letter-spacing:
+        -.7px;
+    }
+
+    .evidence-note {
+
+      margin-top:
+        6px;
+
+      color:
+        var(--muted);
+
+      font-size:
+        9px;
+
+      line-height:
+        1.5;
+    }
+
+    .evidence-safe {
+
+      border-color:
+        rgba(35,196,131,.17);
+
+      background:
+        rgba(35,196,131,.025);
+    }
+
+    .evidence-safe .evidence-value {
+      color:
+        var(--success);
+    }
+
+    .disclaimer {
+
+      margin-top:
+        11px;
+
+      color:
+        var(--muted-2);
+
+      font-size:
+        8px;
+
+      line-height:
+        1.5;
+    }
+
+
+    /* =========================================================
+       LOADER
+       ========================================================= */
+
+    .loader {
+
+      position:
+        fixed;
+
+      inset:
+        0;
+
+      z-index:
+        100;
+
+      display:
+        none;
+
+      place-items:
+        center;
+
+      background:
+        rgba(4, 8, 14, .72);
+
+      backdrop-filter:
+        blur(7px);
+    }
+
+    .loader.active {
+      display:
+        grid;
+    }
+
+    .loader-box {
+
+      min-width:
+        280px;
+
+      padding:
+        20px 22px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius:
+        15px;
+
+      background:
+        var(--surface);
+
+      box-shadow:
+        var(--shadow);
+
+      text-align:
+        center;
+    }
+
+    .loader-title {
+
+      font-size:
+        13px;
+
+      font-weight:
+        900;
+    }
+
+    .loader-text {
+
+      margin-top:
+        6px;
+
+      color:
+        var(--muted);
+
+      font-size:
+        10px;
+    }
+
+
+    /* =========================================================
+       FOOTER
+       ========================================================= */
+
+    .footer {
+
+      display:
+        flex;
+
+      justify-content:
+        space-between;
+
+      gap:
+        10px;
+
+      margin-top:
+        13px;
+
+      color:
+        var(--muted-2);
+
+      font-size:
+        8px;
+    }
+
+
+    /* =========================================================
+       RESPONSIVE
+       ========================================================= */
+
+    @media (max-width: 1150px) {
+
+      .main-grid {
+        grid-template-columns:
+          1fr;
+      }
+
+      .memory-grid,
+      .evidence-grid {
+        grid-template-columns:
+          repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 800px) {
+
+      .topbar {
+        align-items:
+          flex-start;
+
+        flex-direction:
+          column;
+      }
+
+      .header-actions {
+        justify-content:
+          flex-start;
+      }
+
+      .hero {
+        grid-template-columns:
+          1fr;
+      }
+
+      .hero-message {
+
+        padding:
+          15px 0 0;
+
+        border-left:
+          0;
+
+        border-top:
+          1px solid var(--border);
+      }
+
+      .kpis {
+        grid-template-columns:
+          repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 550px) {
+
+      .shell {
+        width:
+          min(100% - 20px, 1580px);
+      }
+
+      .kpis,
+      .memory-grid,
+      .evidence-grid {
+        grid-template-columns:
+          1fr;
+      }
+
+      .project {
+        font-size:
+          23px;
+      }
+
+      .hero {
+        padding:
+          20px;
+      }
+    }
+
+    /* Balanced typography: clear hierarchy without oversized blocks. */
+    .hero-title {
+      font-size: clamp(28px, 3.2vw, 38px);
+      line-height: 1.06;
+    }
+    .project {
+      font-size: 25px;
+    }
+    .hero-quote {
+      font-size: 15.5px;
+      line-height: 1.45;
+    }
+    .hero-subtitle {
+      font-size: 13px;
+    }
+    .panel-title {
+      font-size: 13.5px;
+      letter-spacing: .07em;
+    }
+    .section .panel-title {
+      font-size: 15.5px;
+    }
+    .badge {
+      font-size: 8.5px;
+    }
+    .pipeline-step strong {
+      font-size: 12.5px;
+    }
+    .pipeline-step small {
+      font-size: 11px;
+    }
+    .data-row {
+      font-size: 11px;
+    }
+    .memory-description,
+    .decision-reason,
+    .safe-copy {
+      font-size: 11px;
+    }
+    .decision-action {
+      font-size: 22px;
+    }
+
+    /* Long scenario names should wrap instead of overflowing. */
+    #bottleneckValue {
+      font-size: 18px;
+      line-height: 1.15;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    #scenarioValue {
+      max-width: 68%;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      line-height: 1.3;
+      font-size: 11px;
+    }
+
+
+  </style>
+</head>
+
+
+<body>
+
+  <div
+    class="loader"
+    id="loader"
+  >
+    <div class="loader-box">
+
+      <div class="loader-title">
+        Running ED Resolve
+      </div>
+
+      <div class="loader-text">
+        Memory → constraints → counterfactual simulation
+      </div>
+
+    </div>
+  </div>
+
+
+  <main class="shell">
+
+
+    <!-- =====================================================
+         TOPBAR
+         ===================================================== -->
+
+    <header class="topbar">
+
+      <div class="brand">
+
+        <div class="brand-mark">
+          ER
+        </div>
+
+        <div>
+
+          <div class="team">
+            GEOMETROGENESIS
+          </div>
+
+          <div class="project">
+            ED Resolve
+          </div>
+
+          <div class="descriptor">
+            Experiential Operational Decision Engine
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="header-actions">
+
+        <button
+          class="header-button active"
+          id="knownButton"
+          onclick="runLive('known')"
+        >
+          Familiar Regime
+        </button>
+
+        <button
+          class="header-button"
+          id="novelButton"
+          onclick="runLive('novel')"
+        >
+          Novel Regime
+        </button>
+
+        <button
+          class="header-button"
+          id="themeButton"
+          onclick="toggleTheme()"
+          aria-label="Toggle light and dark mode"
+          title="Toggle light and dark mode"
+        >
+          ◐
+        </button>
+
+        <div class="live-status">
+          <span class="live-dot"></span>
+          SIMULATION LIVE
+        </div>
+
+      </div>
+
+    </header>
+
+
+    <!-- =====================================================
+         HERO
+         ===================================================== -->
+
+    <section class="hero">
+
+      <div>
+
+        <div class="hero-title">
+          Operational memory that
+          <span style="color:var(--primary-2)">
+            knows when to trust itself.
+          </span>
+        </div>
+
+        <div class="hero-subtitle">
+
+          ED Resolve helps emergency-department operations resolve transfer bottlenecks.
+          It uses Hindsight to remember what worked before, checks whether that experience
+          still fits the situation now, tests possible actions, and withholds action when
+          the current situation has no safe executable pathway.
+
+        </div>
+
+        <div class="hero-tags">
+
+          <span class="hero-tag">
+            Hindsight
+          </span>
+
+          <span class="hero-tag">
+            State-aware memory
+          </span>
+
+          <span class="hero-tag">
+            CP-SAT constraints
+          </span>
+
+          <span class="hero-tag">
+            SimPy counterfactuals
+          </span>
+
+          <span class="hero-tag">
+            Safe autonomy
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <div class="hero-message">
+
+        <div class="hero-kicker">
+          OBJECTIVE
+        </div>
+
+        <div class="hero-quote">
+          Use past operational experience without blindly repeating it.
+          Hindsight provides memory; the current world, constraints and simulation decide whether it is usable.
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         KPI ROW
+         ===================================================== -->
+
+    <section class="kpis">
+
+      <div class="card kpi">
+
+        <div class="eyebrow">
+          ED BOARDING
+        </div>
+
+        <div
+          class="kpi-value"
+          id="boardingValue"
+        >
+          —
+        </div>
+
+        <div class="kpi-note">
+          current synthetic operational state
+        </div>
+
+      </div>
+
+
+      <div class="card kpi">
+
+        <div class="eyebrow">
+          ICU / HDU CAPACITY
+        </div>
+
+        <div
+          class="kpi-value"
+          id="capacityValue"
+        >
+          —
+        </div>
+
+        <div class="kpi-note">
+          available transfer capacity
+        </div>
+
+      </div>
+
+
+      <div class="card kpi">
+
+        <div class="eyebrow">
+          BOTTLENECK
+        </div>
+
+        <div
+          class="kpi-value"
+          id="bottleneckValue"
+        >
+          —
+        </div>
+
+        <div class="kpi-note">
+          dominant operational dependency
+        </div>
+
+      </div>
+
+
+      <div class="card kpi">
+
+        <div class="eyebrow">
+          MEMORY APPLICABILITY
+        </div>
+
+        <div
+          class="kpi-value primary"
+          id="applicabilityValue"
+        >
+          —
+        </div>
+
+        <div
+          class="kpi-note"
+          id="priorValue"
+        >
+          experiential prior: —
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         PLAIN-LANGUAGE PIPELINE
+         ===================================================== -->
+
+    <section class="card section plain-pipeline">
+
+      <div class="panel-head">
+
+        <h3 class="panel-title">
+          What ED Resolve actually does
+        </h3>
+
+        <span class="badge">
+          END-TO-END DECISION LOOP
+        </span>
+
+      </div>
+
+      <div class="pipeline-grid">
+
+        <div class="pipeline-step">
+          <span class="pipeline-num">1</span>
+          <div>
+            <strong>Observe</strong>
+            <small>Build the current ED / ICU / HDU state.</small>
+          </div>
+        </div>
+
+        <div class="pipeline-step">
+          <span class="pipeline-num">2</span>
+          <div>
+            <strong>Recall with Hindsight</strong>
+            <small>Find previous resolution experiences.</small>
+          </div>
+        </div>
+
+        <div class="pipeline-step">
+          <span class="pipeline-num">3</span>
+          <div>
+            <strong>Validate memory</strong>
+            <small>Check whether those experiences fit this state.</small>
+          </div>
+        </div>
+
+        <div class="pipeline-step">
+          <span class="pipeline-num">4</span>
+          <div>
+            <strong>Generate options</strong>
+            <small>Propose possible operational interventions.</small>
+          </div>
+        </div>
+
+        <div class="pipeline-step">
+          <span class="pipeline-num">5</span>
+          <div>
+            <strong>Enforce constraints</strong>
+            <small>Remove actions the current resources cannot support.</small>
+          </div>
+        </div>
+
+        <div class="pipeline-step">
+          <span class="pipeline-num">6</span>
+          <div>
+            <strong>Simulate</strong>
+            <small>Test the remaining actions counterfactually.</small>
+          </div>
+        </div>
+
+        <div class="pipeline-step">
+          <span class="pipeline-num">7</span>
+          <div>
+            <strong>Decide</strong>
+            <small>A deterministic layer selects the feasible action.</small>
+          </div>
+        </div>
+
+        <div class="pipeline-step">
+          <span class="pipeline-num">8</span>
+          <div>
+            <strong>Learn or abstain</strong>
+            <small>Retain the outcome, or require human review in a novel regime.</small>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         MAIN INTELLIGENCE AREA
+         ===================================================== -->
+
+    <section class="main-grid">
+
+
+      <!-- WORLD -->
+
+      <div class="card panel">
+
+        <div class="panel-head">
+
+          <h3 class="panel-title">
+            Current World
+          </h3>
+
+          <span class="badge">
+            WHAT IS HAPPENING NOW
+          </span>
+
+        </div>
+
+
+        <div class="flow">
+
+          <div class="flow-node">
+            ED
+          </div>
+
+          <div class="flow-arrow">
+            →
+          </div>
+
+          <div
+            class="flow-node hot"
+            id="flowBottleneck"
+          >
+            BED CLEANING
+          </div>
+
+          <div class="flow-arrow">
+            →
+          </div>
+
+          <div class="flow-node">
+            ICU
+          </div>
+
+        </div>
+
+
+        <div class="data-row">
+
+          <span>
+            Scenario
+          </span>
+
+          <strong id="scenarioValue">
+            —
+          </strong>
+
+        </div>
+
+
+        <div class="data-row">
+
+          <span>
+            Critical path
+          </span>
+
+          <strong id="criticalPathValue">
+            —
+          </strong>
+
+        </div>
+
+
+        <div class="data-row">
+
+          <span>
+            Graph dependency
+          </span>
+
+          <strong id="graphDependencyValue">
+            —
+          </strong>
+
+        </div>
+
+
+        <div class="data-row">
+
+          <span>
+            Confidence
+          </span>
+
+          <strong id="confidenceValue">
+            —
+          </strong>
+
+        </div>
+
+      </div>
+
+
+      <!-- HINDSIGHT -->
+
+      <div class="card panel">
+
+        <div class="panel-head">
+
+          <h3 class="panel-title">
+            Hindsight Memory
+          </h3>
+
+          <span class="badge">
+            WHAT HAPPENED BEFORE
+          </span>
+
+        </div>
+
+
+        <div
+          class="memory-score"
+          id="memoryScore"
+        >
+          —
+        </div>
+
+
+        <div class="memory-bar">
+
+          <div
+            class="memory-fill"
+            id="memoryFill"
+          ></div>
+
+        </div>
+
+
+        <div class="data-row">
+
+          <span>
+            Recalled experiences
+          </span>
+
+          <strong id="memoryCount">
+            —
+          </strong>
+
+        </div>
+
+
+        <div class="data-row">
+
+          <span>
+            Structural matches
+          </span>
+
+          <strong id="structuralMatches">
+            —
+          </strong>
+
+        </div>
+
+
+        <div class="data-row">
+
+          <span>
+            Experiential prior
+          </span>
+
+          <strong id="priorScale">
+            —
+          </strong>
+
+        </div>
+
+
+        <div
+          class="memory-description"
+          id="memoryDescription"
+        >
+          Waiting for a scenario.
+        </div>
+
+      </div>
+
+
+      <!-- DECISION -->
+
+      <div class="card panel">
+
+        <div class="panel-head">
+
+          <h3 class="panel-title">
+            Decision Layer
+          </h3>
+
+          <span class="badge">
+            WHAT CAN BE DONE NOW
+          </span>
+
+        </div>
+
+
+        <div
+          class="decision-action"
+          id="decisionAction"
+        >
+          —
+        </div>
+
+
+        <div
+          class="decision-reason"
+          id="decisionReason"
+        >
+          The model never lets memory directly choose the action. Feasibility checks and counterfactual simulation come first.
+        </div>
+
+
+        <div
+          class="status-pill good"
+          id="decisionStatus"
+        >
+          READY
+        </div>
+
+
+        <div
+          class="safe-mode hidden"
+          id="safeMode"
+        >
+
+          <div class="safe-title">
+            SAFE MODE
+          </div>
+
+          <div
+            class="safe-copy"
+            id="safeReason"
+          >
+            Autonomous action withheld.
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         HINDSIGHT SIGNIFICANCE
+         ===================================================== -->
+
+    <section class="card section">
+
+      <div class="panel-head">
+
+        <h3 class="panel-title">
+          How Hindsight is used
+        </h3>
+
+        <span class="badge">
+          MEMORY → VALIDATION → LEARNING
+        </span>
+
+      </div>
+
+
+      <div class="memory-grid">
+
+
+        <div class="memory-step">
+
+          <div class="memory-step-num">
+            01
+          </div>
+
+          <div class="memory-step-title">
+            Recall
+          </div>
+
+          <div class="memory-step-text">
+            Hindsight retrieves earlier operational episodes that resemble the current problem.
+          </div>
+
+        </div>
+
+
+        <div class="memory-step">
+
+          <div class="memory-step-num">
+            02
+          </div>
+
+          <div class="memory-step-title">
+            Validate
+          </div>
+
+          <div class="memory-step-text">
+            The system checks whether those memories match the current bottleneck and scenario.
+          </div>
+
+        </div>
+
+
+        <div class="memory-step">
+
+          <div class="memory-step-num">
+            03
+          </div>
+
+          <div class="memory-step-title">
+            Influence
+          </div>
+
+          <div class="memory-step-text">
+            Relevant experience becomes a small, bounded signal — never the final decision.
+          </div>
+
+        </div>
+
+
+        <div class="memory-step">
+
+          <div class="memory-step-num">
+            04
+          </div>
+
+          <div class="memory-step-title">
+            Learn
+          </div>
+
+          <div class="memory-step-text">
+            The completed episode is retained so the next similar problem can benefit from it.
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="memory-callout">
+
+        <strong>Why this matters:</strong> the system remembers the past, but it trusts that memory only when the present situation supports it.
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         COUNTERFACTUAL SIMULATION
+         ===================================================== -->
+
+    <section class="card section">
+
+      <div class="panel-head">
+
+        <h3 class="panel-title">
+          Counterfactual Simulation
+        </h3>
+
+        <span class="badge">
+          TEST BEFORE ACTING
+        </span>
+
+      </div>
+
+
+      <div class="table-wrap">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>
+                Action
+              </th>
+
+              <th>
+                Resolution
+              </th>
+
+              <th>
+                Utility
+              </th>
+
+              <th>
+                Feasible
+              </th>
+
+              <th>
+                Result
+              </th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody id="simulationBody">
+
+            <tr>
+
+              <td colspan="5">
+                Waiting for a simulation.
+              </td>
+
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         EVIDENCE / RESULTS
+         ===================================================== -->
+
+    <section class="card section">
+
+      <div class="panel-head">
+
+        <h3 class="panel-title">
+          What the system demonstrates
+        </h3>
+
+        <span class="badge">
+          SYNTHETIC DEMO
+        </span>
+
+      </div>
+
+
+      <div class="evidence-grid">
+
+
+        <div class="evidence-card">
+
+          <div class="evidence-label">
+            MEMORY
+          </div>
+
+          <div
+            class="evidence-value"
+            id="evidenceMemory"
+          >
+            —
+          </div>
+
+          <div class="evidence-note">
+            past cases recalled
+          </div>
+
+        </div>
+
+
+        <div class="evidence-card">
+
+          <div class="evidence-label">
+            EXPERIENCE PRIOR
+          </div>
+
+          <div
+            class="evidence-value"
+            id="evidencePrior"
+          >
+            —
+          </div>
+
+          <div class="evidence-note">
+            bounded memory influence
+          </div>
+
+        </div>
+
+
+        <div class="evidence-card">
+
+          <div class="evidence-label">
+            COUNTERFACTUALS
+          </div>
+
+          <div
+            class="evidence-value"
+            id="evidenceCounterfactuals"
+          >
+            —
+          </div>
+
+          <div class="evidence-note">
+            actions tested before selection
+          </div>
+
+        </div>
+
+
+        <div class="evidence-card evidence-safe">
+
+          <div class="evidence-label">
+            SAFE AUTONOMY
+          </div>
+
+          <div
+            class="evidence-value"
+            id="evidenceSafe"
+          >
+            —
+          </div>
+
+          <div class="evidence-note">
+            what happens when memory does not apply
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="disclaimer">
+
+        Synthetic operational simulation only.
+        This system does not diagnose patients, prescribe treatment,
+        or claim clinical safety certification or real-world clinical
+        performance.
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         FOOTER
+         ===================================================== -->
+
+    <footer class="footer">
+
+      <span>
+        GEOMETROGENESIS · ED Resolve
+      </span>
+
+      <span>
+        Operational decision support · Synthetic environment
+      </span>
+
+    </footer>
+
+  </main>
+
+
+  <!-- =======================================================
+       JAVASCRIPT
+       ======================================================= -->
+
+  <script>
+
+    const THEME_KEY =
+      "ed-resolve-theme";
+
+
+    /* ========================================================
+       HELPERS
+       ======================================================== */
+
+    function valueAt(
+      object,
+      path,
+      fallback = null
+    ) {
+
+      let current =
+        object;
+
+      for (
+        const key of path.split(".")
+      ) {
+
+        if (
+          current === null ||
+          current === undefined
+        ) {
+          return fallback;
+        }
+
+        current =
+          current[key];
+      }
+
+      return (
+        current === null ||
+        current === undefined
+      )
+        ? fallback
+        : current;
+    }
+
+
+    function formatNumber(
+      value,
+      digits = 1
+    ) {
+
+      if (
+        value === null ||
+        value === undefined ||
+        value === ""
+      ) {
+        return "—";
+      }
+
+      const number =
+        Number(value);
+
+      if (
+        Number.isFinite(number)
+      ) {
+        return number.toFixed(
+          digits
+        );
+      }
+
+      return String(value);
+    }
+
+
+    function setText(
+      id,
+      value
+    ) {
+
+      const element =
+        document.getElementById(id);
+
+      if (element) {
+        element.textContent =
+          value;
+      }
+    }
+
+
+    /* ========================================================
+       THEME
+       ======================================================== */
+
+    function applyTheme(
+      theme
+    ) {
+
+      const light =
+        theme === "light";
+
+      document.body.classList.toggle(
+        "light",
+        light
+      );
+
+      const button =
+        document.getElementById(
+          "themeButton"
+        );
+
+      if (button) {
+
+        button.textContent =
+          light ? "☀" : "◐";
+
+        button.title =
+          light
+            ? "Switch to dark mode"
+            : "Switch to light mode";
+      }
+
+      localStorage.setItem(
+        THEME_KEY,
+        light
+          ? "light"
+          : "dark"
+      );
+    }
+
+
+    function toggleTheme() {
+
+      const isLight =
+        document.body.classList.contains(
+          "light"
+        );
+
+      applyTheme(
+        isLight
+          ? "dark"
+          : "light"
+      );
+    }
+
+
+    (function initializeTheme() {
+
+      const saved =
+        localStorage.getItem(
+          THEME_KEY
+        );
+
+      if (
+        saved === "light" ||
+        saved === "dark"
+      ) {
+
+        applyTheme(
+          saved
+        );
+
+        return;
+      }
+
+      const preferredLight =
+        window.matchMedia &&
+        window.matchMedia(
+          "(prefers-color-scheme: light)"
+        ).matches;
+
+      applyTheme(
+        preferredLight
+          ? "light"
+          : "dark"
+      );
+
+    })();
+
+
+    /* ========================================================
+       DEMO BUTTON STATES
+       ======================================================== */
+
+    function setActiveMode(
+      mode
+    ) {
+
+      document
+        .getElementById(
+          "knownButton"
+        )
+        .classList.toggle(
+          "active",
+          mode === "known"
+        );
+
+      document
+        .getElementById(
+          "novelButton"
+        )
+        .classList.toggle(
+          "active",
+          mode === "novel"
+        );
+    }
+
+
+    /* ========================================================
+       RENDER
+       ======================================================== */
+
+    function renderDashboard(
+      data
+    ) {
+
+      const raw =
+        data.raw_state || {};
+
+      const resources =
+        raw.resources || {};
+
+      const bottleneck =
+        data.bottleneck || {};
+
+      const applicability =
+        data.experience_applicability || {};
+
+      const world =
+        data.world_model || {};
+
+      const decision =
+        data.decision || null;
+
+      const safeMode =
+        data.safe_mode || {};
+
+      const counterfactuals =
+        data.counterfactual_results || [];
+
+
+      /* ------------------------------------------------------
+         TOP KPIs
+         ------------------------------------------------------ */
+
+      setText(
+        "boardingValue",
+        raw.boarding_patients ??
+          world.boarding_patients ??
+          "—"
+      );
+
+
+      setText(
+        "capacityValue",
+        `${resources.icu_beds_available ?? "—"} / ${
+          resources.hdu_beds_available ?? "—"
+        }`
+      );
+
+
+      setText(
+        "bottleneckValue",
+        bottleneck.graph_dominant_dependency ??
+          bottleneck.dominant_dependency ??
+          "—"
+      );
+
+
+      const mode =
+        applicability.mode ??
+        "—";
+
+
+      const applicabilityElement =
+        document.getElementById(
+          "applicabilityValue"
+        );
+
+
+      applicabilityElement.textContent =
+        mode;
+
+
+      applicabilityElement.className =
+        "kpi-value " +
+        (
+          mode === "HIGH"
+            ? "success"
+            : mode === "MEDIUM"
+              ? "warning"
+              : mode === "LOW"
+                ? "danger"
+                : "primary"
+        );
+
+
+      setText(
+        "priorValue",
+        `experiential prior: ${
+          formatNumber(
+            applicability.prior_scale,
+            2
+          )
+        }`
+      );
+
+
+      /* ------------------------------------------------------
+         WORLD MODEL
+         ------------------------------------------------------ */
+
+      setText(
+        "flowBottleneck",
+        bottleneck.graph_dominant_dependency ??
+          bottleneck.dominant_dependency ??
+          "OPERATIONAL BOTTLENECK"
+      );
+
+
+      setText(
+        "scenarioValue",
+        raw.scenario_type ??
+          "—"
+      );
+
+
+      const criticalPath =
+        bottleneck.critical_path ??
+        world.critical_path ??
+        [];
+
+
+      setText(
+        "criticalPathValue",
+        criticalPath.length
+          ? criticalPath.join(
+              " → "
+            )
+          : "—"
+      );
+
+
+      setText(
+        "graphDependencyValue",
+        bottleneck.graph_dominant_dependency ??
+          world.graph_dominant_dependency ??
+          bottleneck.dominant_dependency ??
+          "—"
+      );
+
+
+      setText(
+        "confidenceValue",
+        bottleneck.confidence !== undefined
+          ? formatNumber(
+              bottleneck.confidence,
+              2
+            )
+          : "—"
+      );
+
+
+      /* ------------------------------------------------------
+         MEMORY
+         ------------------------------------------------------ */
+
+      const score =
+        Number(
+          applicability.global_score ??
+          0
+        );
+
+
+      setText(
+        "memoryScore",
+        score.toFixed(3)
+      );
+
+
+      document
+        .getElementById(
+          "memoryScore"
+        )
+        .className =
+          "memory-score " +
+          (
+            mode === "HIGH"
+              ? "success"
+              : mode === "MEDIUM"
+                ? "warning"
+                : mode === "LOW"
+                  ? "danger"
+                  : ""
+          );
+
+
+      document
+        .getElementById(
+          "memoryFill"
+        )
+        .style.width =
+          `${Math.max(
+            0,
+            Math.min(
+              100,
+              score * 100
+            )
+          )}%`;
+
+
+      setText(
+        "memoryCount",
+        applicability.memory_count ??
+          data.recalled_experiences?.length ??
+          "0"
+      );
+
+
+      setText(
+        "structuralMatches",
+        `${applicability.bottleneck_matches ?? 0} / ${
+          applicability.scenario_matches ?? 0
+        }`
+      );
+
+
+      setText(
+        "priorScale",
+        formatNumber(
+          applicability.prior_scale,
+          2
+        )
+      );
+
+
+      if (
+        applicability.structurally_unseen
+      ) {
+
+        setText(
+          "memoryDescription",
+          "No structurally aligned experience was found. Retrieved memories receive zero experiential influence."
+        );
+
+      } else {
+
+        setText(
+          "memoryDescription",
+          "Past operational experience is considered applicable and can contribute a bounded prior."
+        );
+      }
+
+
+      /* ------------------------------------------------------
+         DECISION
+         ------------------------------------------------------ */
+
+      const decisionAction =
+        document.getElementById(
+          "decisionAction"
+        );
+
+      const decisionReason =
+        document.getElementById(
+          "decisionReason"
+        );
+
+      const decisionStatus =
+        document.getElementById(
+          "decisionStatus"
+        );
+
+
+      if (
+        decision
+      ) {
+
+        decisionAction.textContent =
+          decision.selected_action ??
+          "—";
+
+
+        decisionReason.textContent =
+          decision.selection_reason ??
+          "Selected from feasible counterfactual outcomes and bounded experiential evidence.";
+
+
+        decisionStatus.textContent =
+          "ACTION SELECTED";
+
+
+        decisionStatus.className =
+          "status-pill good";
+
+      } else {
+
+        decisionAction.textContent =
+          safeMode.active
+            ? "Autonomous action withheld"
+            : "No autonomous decision";
+
+
+        decisionReason.textContent =
+          safeMode.reason ??
+          "No autonomous intervention was selected.";
+
+
+        decisionStatus.textContent =
+          "HUMAN REVIEW";
+
+
+        decisionStatus.className =
+          "status-pill bad";
+      }
+
+
+      const safePanel =
+        document.getElementById(
+          "safeMode"
+        );
+
+
+      if (
+        safeMode.active
+      ) {
+
+        safePanel.classList.remove(
+          "hidden"
+        );
+
+
+        setText(
+          "safeReason",
+          safeMode.reason ??
+            "Autonomous action withheld. Human review required."
+        );
+
+      } else {
+
+        safePanel.classList.add(
+          "hidden"
+        );
+      }
+
+
+      /* ------------------------------------------------------
+         COUNTERFACTUAL TABLE
+         ------------------------------------------------------ */
+
+      const table =
+        document.getElementById(
+          "simulationBody"
+        );
+
+
+      if (
+        !counterfactuals.length
+      ) {
+
+        table.innerHTML = `
+          <tr>
+            <td colspan="5">
+              No executable counterfactual resolution pathway.
+            </td>
+          </tr>
+        `;
+
+      } else {
+
+        table.innerHTML =
+          counterfactuals.map(
+            result => {
+
+              const feasible =
+                Boolean(
+                  result.feasible
+                );
+
+              const resolved =
+                Boolean(
+                  result.resolved
+                );
+
+              return `
+                <tr>
+
+                  <td>
+                    <strong>
+                      ${
+                        result.action ??
+                        "—"
+                      }
+                    </strong>
+                  </td>
+
+                  <td>
+                    ${
+                      result.resolution_time !==
+                        undefined &&
+                      result.resolution_time !==
+                        null
+                        ? `${formatNumber(
+                            result.resolution_time,
+                            1
+                          )} min`
+                        : "—"
+                    }
+                  </td>
+
+                  <td>
+                    ${
+                      result.utility_score !==
+                        undefined &&
+                      result.utility_score !==
+                        null
+                        ? formatNumber(
+                            result.utility_score,
+                            2
+                          )
+                        : "—"
+                    }
+                  </td>
+
+                  <td class="${
+                    feasible
+                      ? "table-good"
+                      : "table-bad"
+                  }">
+
+                    ${
+                      feasible
+                        ? "YES"
+                        : "NO"
+                    }
+
+                  </td>
+
+                  <td class="${
+                    resolved
+                      ? "table-good"
+                      : "table-bad"
+                  }">
+
+                    ${
+                      resolved
+                        ? "RESOLVES"
+                        : "NO PATH"
+                    }
+
+                  </td>
+
+                </tr>
+              `;
+            }
+          ).join("");
+      }
+
+
+      /* ------------------------------------------------------
+         EVIDENCE
+         ------------------------------------------------------ */
+
+      setText(
+        "evidenceMemory",
+        applicability.memory_count ??
+          data.recalled_experiences?.length ??
+          "0"
+      );
+
+
+      setText(
+        "evidencePrior",
+        formatNumber(
+          applicability.prior_scale,
+          2
+        )
+      );
+
+
+      setText(
+        "evidenceCounterfactuals",
+        counterfactuals.length
+      );
+
+
+      setText(
+        "evidenceSafe",
+        safeMode.active
+          ? "ACTIVE"
+          : "READY"
+      );
+
+
+      /* ------------------------------------------------------
+         MODEL TITLE
+         ------------------------------------------------------ */
+
+      document.title =
+        `ED Resolve · ${
+          raw.scenario_type ??
+          "Operational Decision Engine"
+        }`;
+    }
+
+
+    /* ========================================================
+       LIVE PIPELINE
+       ======================================================== */
+
+    async function runLive(
+      mode
+    ) {
+
+      setActiveMode(mode);
+
+      // Render the prepared demo snapshot immediately.
+      // The real backend refresh is intentionally non-blocking.
+      if (mode === "known") {
+        renderDashboard(initialSnapshot);
+      } else {
+        renderDashboard(novelSnapshot);
+      }
+
+      // Refresh from the real pipeline in the background when available.
+      // This never blocks the Familiar <-> Novel switch.
+      fetch(`/api/demo/${mode}`, { cache: "no-store" })
+        .then(async response => {
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.detail || "Dashboard request failed.");
+          renderDashboard(payload);
+        })
+        .catch(() => {
+          // Keep the prepared demo snapshot visible if the backend is busy/down.
+        });
+    }
+
+
+    /* ========================================================
+       INSTANT INITIAL DEMO SNAPSHOT
+       ======================================================== */
+
+    const initialSnapshot = {
+
+      mode:
+        "known",
+
+      raw_state: {
+
+        scenario_type:
+          "ICU_BED_CLEANING",
+
+        boarding_patients:
+          7,
+
+        resources: {
+
+          icu_beds_available:
+            0,
+
+          hdu_beds_available:
+            0
+
+        }
+
+      },
+
+      bottleneck: {
+
+        bottleneck_type:
+          "ICU_BED_CLEANING",
+
+        dominant_dependency:
+          "BED_CLEANING",
+
+        graph_dominant_dependency:
+          "BED_CLEANING",
+
+        confidence:
+          0.96,
+
+        critical_path: [
+          "ED",
+          "BED_CLEANING",
+          "ICU"
+        ]
+
+      },
+
+      experience_applicability: {
+
+        global_score:
+          0.997,
+
+        mode:
+          "HIGH",
+
+        prior_scale:
+          1.00,
+
+        memory_count:
+          6,
+
+        bottleneck_matches:
+          6,
+
+        scenario_matches:
+          6,
+
+        structurally_unseen:
+          false
+
+      },
+
+      recalled_experiences: [
+        {}, {}, {}, {}, {}, {}
+      ],
+
+      counterfactual_results: [
+
+        {
+
+          action:
+            "EXPEDITE_BED_CLEANING",
+
+          resolution_time:
+            48.03,
+
+          utility_score:
+            72.05,
+
+          feasible:
+            true,
+
+          resolved:
+            true
+
+        },
+
+        {
+
+          action:
+            "PRIORITIZE_TRANSPORT",
+
+          resolution_time:
+            78.03,
+
+          utility_score:
+            117.05,
+
+          feasible:
+            true,
+
+          resolved:
+            true
+
+        },
+
+        {
+
+          action:
+            "WAIT",
+
+          resolution_time:
+            83.03,
+
+          utility_score:
+            124.55,
+
+          feasible:
+            true,
+
+          resolved:
+            true
+
+        },
+
+        {
+
+          action:
+            "REQUEST_ALTERNATIVE_UNIT",
+
+          resolution_time:
+            null,
+
+          utility_score:
+            null,
+
+          feasible:
+            false,
+
+          resolved:
+            false
+
+        }
+
+      ],
+
+      decision: {
+
+        selected_action:
+          "EXPEDITE_BED_CLEANING",
+
+        selection_reason:
+          "Hard operational constraints and counterfactual simulation favor expedited bed cleaning, with applicable historical experience providing a bounded prior."
+
+      },
+
+      safe_mode: {}
+
+    };
+
+
+    const novelSnapshot = {
+
+      mode: "novel",
+
+      raw_state: {
+        scenario_type: "CASCADE_RESOURCE_COLLAPSE_X53",
+        boarding_patients: 11,
+        resources: {
+          icu_beds_available: 0,
+          hdu_beds_available: 0
+        }
+      },
+
+      bottleneck: {
+        bottleneck_type: "CASCADE_RESOURCE_COLLAPSE_X53",
+        dominant_dependency: "HDU",
+        graph_dominant_dependency: "HDU",
+        confidence: 0.88,
+        critical_path: ["ED", "HDU"]
+      },
+
+      experience_applicability: {
+        global_score: 0.000,
+        mode: "LOW",
+        prior_scale: 0.00,
+        memory_count: 6,
+        bottleneck_matches: 0,
+        scenario_matches: 0,
+        structurally_unseen: true
+      },
+
+      recalled_experiences: [{}, {}, {}, {}, {}, {}],
+
+      counterfactual_results: [],
+
+      decision: null,
+
+      safe_mode: {
+        active: true,
+        reason: "Current-state counterfactual simulation found no executable resolution pathway."
+      }
+    };
+
+
+    renderDashboard(
+      initialSnapshot
+    );
+
+  </script>
+
+</body>
+
+</html>
