@@ -329,8 +329,260 @@ def run_counterfactual_simulations(
 
 
 # ---------------------------------------------------------------------------
-# 3. Deterministic action selection
+# 3. Experience-conditioned deterministic action selection
 # ---------------------------------------------------------------------------
+
+EXPERIENCE_PRIOR_WEIGHT = 0.15
+
+EXPERIENCE_ACTIONS = {
+    "WAIT",
+    "EXPEDITE_BED_CLEANING",
+    "REQUEST_ALTERNATIVE_UNIT",
+    "PRIORITIZE_TRANSPORT",
+    "ESCALATE_TO_BED_MANAGER",
+}
+
+
+def _memory_action(
+    memory: dict[str, Any],
+) -> str | None:
+
+    tags = memory.get(
+        "tags",
+        [],
+    )
+
+    if isinstance(
+        tags,
+        list,
+    ):
+
+        for tag in tags:
+
+            action = str(
+                tag
+            ).strip().upper()
+
+            if action in EXPERIENCE_ACTIONS:
+                return action
+
+    text = str(
+        memory.get(
+            "text",
+            "",
+        )
+    )
+
+    for key in (
+        '"selected_action"',
+        '"action"',
+    ):
+
+        marker_index = text.find(
+            key
+        )
+
+        if marker_index < 0:
+            continue
+
+        fragment = text[
+            marker_index:
+            marker_index + 120
+        ]
+
+        for action in EXPERIENCE_ACTIONS:
+
+            if f'"{action}"' in fragment:
+                return action
+
+    return None
+
+
+def _build_experience_support(
+    memories: list[dict[str, Any]],
+    actions: list[str],
+) -> dict[str, float]:
+
+    weighted_success: dict[str, float] = {
+        action: 0.0
+        for action in actions
+    }
+
+    weighted_relevance: dict[str, float] = {
+        action: 0.0
+        for action in actions
+    }
+
+    counts: dict[str, int] = {
+        action: 0
+        for action in actions
+    }
+
+    seen_documents: set[str] = set()
+
+    for memory in memories:
+
+        if not isinstance(
+            memory,
+            dict,
+        ):
+            continue
+
+        metadata = memory.get(
+            "metadata",
+            {},
+        )
+
+        if not isinstance(
+            metadata,
+            dict,
+        ):
+            metadata = {}
+
+        if metadata.get(
+            "memory_type"
+        ) != "resolution_experience":
+            continue
+
+        document_id = str(
+            memory.get(
+                "document_id",
+                memory.get(
+                    "id",
+                    "",
+                ),
+            )
+        )
+
+        if document_id in seen_documents:
+            continue
+
+        seen_documents.add(
+            document_id
+        )
+
+        action = _memory_action(
+            memory
+        )
+
+        if action not in actions:
+            continue
+
+        scores = memory.get(
+            "scores",
+            {},
+        )
+
+        if not isinstance(
+            scores,
+            dict,
+        ):
+            scores = {}
+
+        relevance = scores.get(
+            "reranker",
+            scores.get(
+                "semantic",
+                0.5,
+            ),
+        )
+
+        try:
+            relevance = float(
+                relevance
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            relevance = 0.5
+
+        relevance = max(
+            0.0,
+            min(
+                1.0,
+                relevance,
+            ),
+        )
+
+        tags = memory.get(
+            "tags",
+            [],
+        )
+
+        if not isinstance(
+            tags,
+            list,
+        ):
+            tags = []
+
+        normalized_tags = {
+            str(tag).lower()
+            for tag in tags
+        }
+
+        resolution_status = str(
+            metadata.get(
+                "resolution_status",
+                "",
+            )
+        ).lower()
+
+        successful = (
+            resolution_status == "resolved"
+            or "successful"
+            in normalized_tags
+        )
+
+        success_factor = (
+            1.0
+            if successful
+            else 0.25
+        )
+
+        weighted_success[action] += (
+            relevance
+            * success_factor
+        )
+
+        weighted_relevance[action] += (
+            relevance
+        )
+
+        counts[action] += 1
+
+    support: dict[str, float] = {}
+
+    for action in actions:
+
+        relevance_total = (
+            weighted_relevance[action]
+        )
+
+        if relevance_total <= 0:
+            support[action] = 0.0
+            continue
+
+        quality = (
+            weighted_success[action]
+            / relevance_total
+        )
+
+        coverage = min(
+            1.0,
+            counts[action] / 3.0,
+        )
+
+        support[action] = max(
+            0.0,
+            min(
+                1.0,
+                quality * coverage,
+            ),
+        )
+
+    return support
+
 
 def select_action(
     state: EDResolveState,
@@ -351,6 +603,11 @@ def select_action(
         [],
     )
 
+    memories = state.get(
+        "recalled_experiences",
+        [],
+    )
+
     if not results:
         raise ValueError(
             "No counterfactual results available."
@@ -368,10 +625,79 @@ def select_action(
             "No feasible intervention survived constraint validation."
         )
 
-    # Lower utility is better.
+    feasible_actions = [
+        result.action
+        for result in feasible_results
+    ]
+
+    experience_support = (
+        _build_experience_support(
+            memories,
+            feasible_actions,
+        )
+    )
+
+    utilities = [
+        float(
+            result.utility_score
+        )
+        for result in feasible_results
+    ]
+
+    minimum_utility = min(
+        utilities
+    )
+
+    maximum_utility = max(
+        utilities
+    )
+
+    utility_range = (
+        maximum_utility
+        - minimum_utility
+    )
+
+    adjusted_scores: dict[str, float] = {}
+
+    for result in feasible_results:
+
+        utility = float(
+            result.utility_score
+        )
+
+        if utility_range <= 1e-9:
+
+            normalized_simulation_score = 0.0
+
+        else:
+
+            normalized_simulation_score = (
+                utility
+                - minimum_utility
+            ) / utility_range
+
+        memory_penalty = (
+            EXPERIENCE_PRIOR_WEIGHT
+            * (
+                1.0
+                - experience_support.get(
+                    result.action,
+                    0.0,
+                )
+            )
+        )
+
+        adjusted_scores[result.action] = (
+            normalized_simulation_score
+            + memory_penalty
+        )
+
+    # Current-state simulation remains dominant because
+    # memory contributes only a bounded normalized prior.
     selected = min(
         feasible_results,
-        key=lambda result: result.utility_score,
+        key=lambda result:
+        adjusted_scores[result.action],
     )
 
     selected_action = selected.action
@@ -393,7 +719,6 @@ def select_action(
 
     rejected_actions: list[str] = []
 
-    # Hard-constraint rejections.
     for constraint in constraints:
 
         if not constraint.feasible:
@@ -406,16 +731,16 @@ def select_action(
                 f"{constraint.action}: {violations}"
             )
 
-    # Feasible alternatives that scored worse.
     for result in feasible_results:
 
         if result.action == selected_action:
             continue
 
         rejected_actions.append(
-            f"{result.action}: higher counterfactual utility "
-            f"({result.utility_score:.2f} > "
-            f"{selected.utility_score:.2f})"
+            f"{result.action}: higher "
+            f"experience-adjusted score "
+            f"({adjusted_scores[result.action]:.3f} > "
+            f"{adjusted_scores[selected_action]:.3f})"
         )
 
     evidence_memory_ids: list[str] = []
@@ -426,11 +751,19 @@ def select_action(
             selected_candidate.evidence_memory_ids
         )
 
+    selected_support = experience_support.get(
+        selected_action,
+        0.0,
+    )
+
     reason = (
-        f"{selected_action} was selected because it produced "
-        f"the lowest feasible counterfactual utility "
-        f"({selected.utility_score:.2f}) under the current "
-        f"operational constraints."
+        f"{selected_action} was selected using the lowest "
+        f"bounded experience-adjusted counterfactual score "
+        f"({adjusted_scores[selected_action]:.3f}). "
+        f"Current-state simulation utility was "
+        f"{selected.utility_score:.2f}. "
+        f"Historical experience support for this action was "
+        f"{selected_support:.3f}."
     )
 
     decision = DecisionRecord(
@@ -440,6 +773,22 @@ def select_action(
         alternatives_considered=alternatives_considered,
         rejected_actions=rejected_actions,
         memory_ids_used=evidence_memory_ids,
+        experience_support={
+            action: round(
+                value,
+                4,
+            )
+            for action, value
+            in experience_support.items()
+        },
+        experience_adjusted_scores={
+            action: round(
+                value,
+                4,
+            )
+            for action, value
+            in adjusted_scores.items()
+        },
         simulation_results=[
             result.model_dump()
             for result in feasible_results
@@ -451,12 +800,27 @@ def select_action(
         "audit_log": [
             _audit(
                 stage="decision",
-                message="Operational intervention selected.",
+                message=(
+                    "Operational intervention selected using "
+                    "current-state counterfactual simulation "
+                    "with bounded state-conditioned "
+                    "experiential support."
+                ),
                 data={
                     "selected_action": selected_action,
                     "selected_utility": selected.utility_score,
-                    "alternatives": alternatives_considered,
-                    "memory_ids_used": evidence_memory_ids,
+                    "selected_adjusted_score": (
+                        adjusted_scores[selected_action]
+                    ),
+                    "experience_support": (
+                        experience_support
+                    ),
+                    "alternatives": (
+                        alternatives_considered
+                    ),
+                    "memory_ids_used": (
+                        evidence_memory_ids
+                    ),
                 },
             )
         ],

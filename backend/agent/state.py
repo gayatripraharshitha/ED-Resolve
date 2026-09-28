@@ -188,6 +188,14 @@ class DecisionRecord(BaseModel):
         default_factory=list
     )
 
+    experience_support: dict[str, float] = Field(
+        default_factory=dict
+    )
+
+    experience_adjusted_scores: dict[str, float] = Field(
+        default_factory=dict
+    )
+
     simulation_results: list[dict[str, Any]] = Field(
         default_factory=list
     )
