@@ -1,1966 +1,721 @@
-\# EDResolve
+# ED Resolve
 
+## Experiential Operational Decision Support for Emergency Department Flow
 
+**Team:** GEOMETROGENESIS  
+**Project:** ED Resolve
 
-\### Experiential Decision Support for Emergency Department Operations
+![ED Resolve dashboard](docs/dashboard-preview.png)
 
+ED Resolve is an operational decision-support prototype for recurring Emergency Department bottlenecks, focused on transfer delays between the ED and downstream units.
 
+The system is built around one practical question:
 
-EDResolve is an experiential decision-support system for recurring Emergency Department operational bottlenecks.
+> **When a similar operational problem happens again, can a decision system use previous operational experience without blindly repeating the past?**
 
+ED Resolve combines current-state modeling, Hindsight experiential memory, candidate generation, hard operational constraints, counterfactual simulation, deterministic selection, outcome comparison, and experience retention.
 
+It is intentionally an **operational research prototype**, not a clinical decision system. It does not diagnose patients, prescribe treatment, or replace clinicians.
 
-The central premise is:
+---
 
+## 1. Problem Statement
 
+### The operational problem
 
-> \*\*When the same operational problem happens again, the system should not have to reason from zero.\*\*
+Emergency Department delays are often produced by interacting system dependencies rather than one isolated event.
 
+A transfer can depend on:
 
+- ED boarding pressure
+- destination-unit capacity
+- bed readiness and cleaning
+- transport availability
+- interdepartmental coordination
+- escalation resources
+- competing transfer requests
 
-EDResolve combines \*\*experiential memory, operational state modeling, constraint validation, counterfactual simulation, and outcome learning\*\* to transform previous operational episodes into reusable decision knowledge.
+The same class of bottleneck may appear repeatedly, while the exact operational state changes from episode to episode.
 
+A previous resolution may have worked because the destination unit had capacity, a cleaning resource was available, transport was accessible, or a coordinator could intervene. A later episode can look similar while having different constraints.
 
+The decision problem is therefore larger than simple bottleneck detection:
 
-Instead of remembering only \*what happened\*, EDResolve captures:
+> **Given the current state, what previous experience is relevant, what still applies, what can actually be executed, and what is likely to happen under each feasible intervention?**
 
+### Why this matters
 
+A 2026 prospective observational study at a tertiary-care hospital in India examined 510 adults who stayed in the ED for at least 24 hours without specialty transfer. The study reported system-related causes in about 70% of delayed cases, including ICU/HDU bed waits and interdepartmental disputes. The study's conclusion emphasizes hospital-wide operational interventions for prolonged boarding. 
 
-\- the operational conditions surrounding the problem
+Research:
 
-\- the bottleneck and its dependencies
+- [PubMed — Causes of Delayed Transfers From the Emergency Department to Speciality Units](https://pubmed.ncbi.nlm.nih.gov/42326213/)
+- [Full text — PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC13275199/)
 
-\- the interventions considered
+This motivates ED Resolve, but it does **not** imply that our prototype has demonstrated clinical impact. The present evaluation uses synthetic operational scenarios.
 
-\- the constraints affecting those interventions
+---
 
-\- the expected consequences
+## 2. Technology Stack
 
-\- the action selected
+The implementation is intentionally separated into layers so memory, reasoning, feasibility, simulation, decision authority, and the interface remain independently inspectable.
 
-\- the observed outcome
+| Layer | Technology used | Purpose in ED Resolve |
+|---|---|---|
+| **Frontend / UI** | HTML5, CSS3, JavaScript | Decision-support dashboard, familiar/novel regime views, memory display, simulation table, decision trace, and Safe Mode presentation |
+| **Frontend serving / API** | FastAPI, Uvicorn | Serves the dashboard and exposes the demo execution endpoints |
+| **Backend** | Python 3.13, FastAPI, Pydantic v2 | Structured state, world models, candidates, constraints, decisions, outcomes, and API serialization |
+| **Agent orchestration** | LangGraph | Coordinates the stateful reasoning graph and failure handling |
+| **Reasoning / candidate generation** | GPT-OSS 120B via Groq | Builds reasoning context and proposes candidate operational interventions |
+| **Experiential memory** | Hindsight 0.10.1 | Recalls and retains operational resolution experiences across episodes |
+| **Memory retention** | GPT-OSS 20B via Hindsight | Extracts/retains structured experience from completed episodes |
+| **Operational graph** | NetworkX | Represents dependencies, graph criticality, dominant dependencies, and critical paths |
+| **Hard constraints** | OR-Tools CP-SAT | Rejects interventions that are infeasible under current operational constraints |
+| **Counterfactual simulation** | SimPy | Tests feasible interventions before final selection |
+| **Numerical / experiment analysis** | NumPy, SciPy, pandas | Synthetic scenario generation, numerical features, evaluation, and analysis |
+| **Version control** | Git, GitHub | Reproducible source history and project delivery |
 
-\- the prediction error
+### Planned extensions
 
-\- the resulting lesson
+The design can be extended with PostgreSQL + SQLAlchemy/Alembic for durable structured persistence, PM4Py for process-mining analysis, and a richer production frontend. These are kept separate from the implemented vertical slice and are not presented as completed functionality.
 
+---
 
+## 3. Research Context and Positioning
 
-This creates a closed experiential learning loop:
+Hospital operational intelligence is already an active product and research area. ED Resolve therefore does **not** claim novelty in generic ED bottleneck prediction, bed-capacity forecasting, digital twins, or prescriptive operational recommendations.
 
+For example, GE HealthCare announced **CareIntellect for Operations** in September 2026, describing a system that forecasts operational bottlenecks, analyzes bed availability, delays, staffing and wait times, and provides prescriptive guidance for hospital operations.
 
+Research / product reference:
 
-```mermaid
+- [GE HealthCare — CareIntellect for Operations](https://www.gehealthcare.com/en-us/products/software/careintellect/careintellect-for-operations)
+- [GE HealthCare — September 15, 2026 announcement](https://www.gehealthcare.com/en-us/about/newsroom/press-releases/ge-healthcare-announces-careintellect-for-operations-helping-health-systems-optimize-resources-and-expand-access-to-care)
 
-flowchart LR
+The project therefore focuses on a narrower question:
 
-&#x20;   A\["Operational State"] --> B\["Experience Retrieval"]
+> **Can institution-specific operational experience become a bounded, state-aware computational resource for future decisions?**
 
-&#x20;   B --> C\["Reasoning"]
+This is aligned with recent research arguing that coarse experiential memory can retrieve experiences that are globally similar but poorly aligned with the agent's current state.
 
-&#x20;   C --> D\["Counterfactual Evaluation"]
+- [ACL 2026 — SAMem: State-Aware Memory as a Fine-Grained Memory for LLM Agents in Decision-Making](https://aclanthology.org/2026.findings-acl.722/)
 
-&#x20;   D --> E\["Decision"]
+---
 
-&#x20;   E --> F\["Outcome"]
+## 4. What ED Resolve Adds
 
-&#x20;   F --> G\["Learning"]
+The core idea is **state-aware experiential reuse inside a constrained operational decision loop**.
 
-&#x20;   G --> B
-
-```
-
-
-
-\---
-
-
-
-\# Why EDResolve?
-
-
-
-Emergency Department delays can emerge from interacting operational dependencies rather than a single isolated event.
-
-
-
-A transfer may depend simultaneously on:
-
-
+A conventional operational pipeline can look like:
 
 ```text
-
-ED capacity
-
-&#x20;     +
-
-destination-unit capacity
-
-&#x20;     +
-
-bed readiness
-
-&#x20;     +
-
-transport availability
-
-&#x20;     +
-
-interdepartmental coordination
-
+Current State
+    |
+    v
+Prediction / Optimization
+    |
+    v
+Recommendation
 ```
 
-
-
-A system that only analyzes the current state can determine what appears feasible now.
-
-
-
-EDResolve additionally asks:
-
-
-
-> \*\*What happened the last time we faced a similar operational deadlock?\*\*
-
-
-
-Historical experience is treated as contextual evidence rather than a command to repeat a previous decision.
-
-
-
-\---
-
-
-
-\# Core Architecture
-
-
-
-```mermaid
-
-flowchart TD
-
-
-
-&#x20;   A\["Current ED Operational State"] --> B\["World Model"]
-
-
-
-&#x20;   B --> C\["Bottleneck Fingerprint"]
-
-
-
-&#x20;   C --> D\["Hindsight Recall"]
-
-
-
-&#x20;   D --> E\["Historical Experiences"]
-
-
-
-&#x20;   B --> F\["GPT-OSS Candidate Generation"]
-
-&#x20;   E --> F
-
-
-
-&#x20;   F --> G\["Candidate Interventions"]
-
-
-
-&#x20;   G --> H\["Hard Constraint Validation"]
-
-
-
-&#x20;   H -->|Feasible| I\["Counterfactual Simulation"]
-
-&#x20;   H -->|Infeasible| X\["Reject"]
-
-
-
-&#x20;   I --> J\["Risk-Aware Selection"]
-
-
-
-&#x20;   J --> K\["Operational Action"]
-
-
-
-&#x20;   K --> L\["Observed Outcome"]
-
-
-
-&#x20;   L --> M\["Expected vs Actual"]
-
-
-
-&#x20;   M --> N\["Learning Signal"]
-
-
-
-&#x20;   N --> O\["Hindsight Retain"]
-
-
-
-&#x20;   O --> D
-
-```
-
-
-
-The architecture deliberately separates:
-
-
-
-\*\*memory → reasoning → feasibility → simulation → selection → learning\*\*
-
-
-
-rather than allowing the language model to directly determine the final action.
-
-
-
-\---
-
-
-
-\# Resolution Memory
-
-
-
-\## From memory of facts to memory of decisions
-
-
-
-A conventional memory system may retain:
-
-
+ED Resolve adds persistent experience and a validation step:
 
 ```text
-
-"Expedite bed cleaning."
-
+Current State
+    |
+    v
+World Model + Bottleneck Fingerprint
+    |
+    v
+Hindsight Recall
+    |
+    v
+Applicability Validation
+    |
+    v
+Candidate Interventions
+    |
+    v
+Hard Constraints
+    |
+    v
+Counterfactual Simulation
+    |
+    v
+Deterministic Selection
+    |
+    v
+Outcome
+    |
+    v
+Expected vs Actual
+    |
+    v
+Hindsight Retention
+    |
+    v
+Future Episodes
 ```
 
+The intended authority structure is deliberately simple:
 
+> **LLM proposes. Constraints filter. Simulation evaluates. Deterministic logic selects. Hindsight remembers.**
 
-EDResolve instead aims to retain the decision context:
+The important distinction is that a previous success becomes **evidence**, not a hard-coded rule.
 
+---
 
+## 5. How Hindsight Is Used
 
-```mermaid
+Hindsight is not used as generic chat history in ED Resolve. It is the long-term **experiential memory layer**.
 
-flowchart TD
+Each completed episode can contribute experience containing:
 
+- the operational conditions
+- bottleneck identity
+- scenario context
+- graph/dependency context
+- actions considered
+- hard constraints
+- expected consequences
+- selected action
+- observed outcome
+- prediction error
+- reusable lesson
 
+When another episode occurs, Hindsight recalls relevant past experience. ED Resolve then checks whether those memories still apply to the current state.
 
-&#x20;   A\["Operational Context"] --> B\["Bottleneck"]
+![Hindsight experiential loop](docs/hindsight-loop.png)
 
-
-
-&#x20;   B --> C\["Available Actions"]
-
-
-
-&#x20;   C --> D\["Constraints"]
-
-
-
-&#x20;   D --> E\["Counterfactual Outcomes"]
-
-
-
-&#x20;   E --> F\["Selected Action"]
-
-
-
-&#x20;   F --> G\["Actual Outcome"]
-
-
-
-&#x20;   G --> H\["Prediction Error"]
-
-
-
-&#x20;   H --> I\["Lesson"]
-
-
-
-&#x20;   I --> J\["Reusable Experience"]
-
-```
-
-
-
-A future episode can therefore retrieve not just a previous action, but the circumstances in which that action worked or failed.
-
-
-
-\---
-
-
-
-\# Counterfactual Experience Reuse
-
-
-
-Historical experience is not blindly replayed.
-
-
-
-The current operational state may differ significantly from the historical case.
-
-
-
-Therefore EDResolve uses historical experience to \*\*generate and contextualize candidates\*\*, then evaluates those candidates under the current state.
-
-
-
-```mermaid
-
-flowchart TD
-
-
-
-&#x20;   A\["Historical Experience"] --> C\["Context Matching"]
-
-
-
-&#x20;   B\["Current Operational State"] --> C
-
-
-
-&#x20;   C --> D\["Candidate Intervention"]
-
-
-
-&#x20;   D --> E\["Hard Constraint Check"]
-
-
-
-&#x20;   E -->|Feasible| F\["Counterfactual Simulation"]
-
-
-
-&#x20;   E -->|Infeasible| G\["Rejected"]
-
-
-
-&#x20;   F --> H\["Simulated Outcomes"]
-
-
-
-&#x20;   H --> I\["Risk / Utility Analysis"]
-
-
-
-&#x20;   I --> J\["Selected Intervention"]
-
-```
-
-
-
-This creates an important distinction:
-
-
-
-> A previous success becomes evidence for a new decision, not a hard-coded rule.
-
-
-
-\---
-
-
-
-\# Decision Pipeline
-
-
-
-```mermaid
-
-flowchart TD
-
-
-
-&#x20;   A\["Current State"] --> B\["Structured World Model"]
-
-
-
-&#x20;   B --> C\["Operational Dependency Graph"]
-
-
-
-&#x20;   C --> D\["Bottleneck Fingerprint"]
-
-
-
-&#x20;   D --> E\["Hindsight Query"]
-
-
-
-&#x20;   E --> F\["Relevant Experiences"]
-
-
-
-&#x20;   F --> G\["GPT-OSS"]
-
-
-
-&#x20;   B --> G
-
-
-
-&#x20;   G --> H\["Candidate Interventions"]
-
-
-
-&#x20;   H --> I\["OR-Tools Constraint Layer"]
-
-
-
-&#x20;   I --> J\["SimPy Counterfactual Evaluation"]
-
-
-
-&#x20;   J --> K\["Deterministic Risk-Aware Selection"]
-
-
-
-&#x20;   K --> L\["Operational Decision"]
-
-
-
-&#x20;   L --> M\["Outcome"]
-
-
-
-&#x20;   M --> N\["Prediction Error"]
-
-
-
-&#x20;   N --> O\["Experience Construction"]
-
-
-
-&#x20;   O --> P\["Hindsight Retain"]
-
-
-
-&#x20;   P --> E
-
-```
-
-
-
-\---
-
-
-
-\# Separation of Responsibilities
-
-
-
-Each subsystem has a deliberately constrained responsibility.
-
-
-
-| Component | Responsibility |
-
-|---|---|
-
-| \*\*Hindsight\*\* | Long-term experiential memory |
-
-| \*\*GPT-OSS\*\* | Candidate generation and reasoning |
-
-| \*\*LangGraph\*\* | Stateful agent orchestration |
-
-| \*\*NetworkX\*\* | Operational dependency graph |
-
-| \*\*PM4Py\*\* | Process and workflow analysis |
-
-| \*\*XGBoost\*\* | Conventional bottleneck prediction baseline |
-
-| \*\*OR-Tools\*\* | Hard operational constraints |
-
-| \*\*SimPy\*\* | Counterfactual discrete-event simulation |
-
-| \*\*PostgreSQL\*\* | Structured state and audit persistence |
-
-| \*\*FastAPI\*\* | Backend service layer |
-
-| \*\*React / TypeScript\*\* | Decision-support interface |
-
-
-
-\---
-
-
-
-\# Decision Authority
-
-
-
-The language model does not directly control the final decision path.
-
-
-
-```mermaid
-
-flowchart LR
-
-
-
-&#x20;   A\["GPT-OSS"] --> B\["Candidate Actions"]
-
-
-
-&#x20;   B --> C\["Constraint Validation"]
-
-
-
-&#x20;   C -->|Infeasible| D\["Reject"]
-
-
-
-&#x20;   C -->|Feasible| E\["SimPy"]
-
-
-
-&#x20;   E --> F\["Counterfactual Outcomes"]
-
-
-
-&#x20;   F --> G\["Deterministic Selection"]
-
-
-
-&#x20;   G --> H\["Selected Action"]
-
-```
-
-
-
-The intended authority structure is:
-
-
+This creates an important safety boundary:
 
 ```text
-
-LLM
-
-&#x20;↓
-
-Propose
-
-
-
-Constraint Layer
-
-&#x20;↓
-
-Filter
-
-
-
-Simulator
-
-&#x20;↓
-
-Evaluate
-
-
-
-Decision Engine
-
-&#x20;↓
-
-Select
-
+Hindsight Recall
+      |
+      v
+Applicability Gate
+      |
+      +----------------------+----------------------+
+      |                      |                      |
+      v                      v                      v
+    HIGH                   MEDIUM                  LOW
+      |                      |                      |
+ bounded influence      reduced influence      no historical prior
+      |                      |                      |
+      +----------------------+----------------------+
+                             |
+                             v
+                    Current-state evaluation
 ```
 
+Official references:
 
+- [Hindsight documentation](https://docs.hindsight.vectorize.io/)
+- [Hindsight GitHub](https://github.com/vectorize-io/hindsight)
+- [Hindsight research paper](https://arxiv.org/abs/2512.12818)
 
-This makes the final decision path more deterministic and auditable.
+---
 
+## 6. Product Interface
 
+The UI is designed to explain the system to a non-specialist first and expose deeper layers only when needed.
 
-\---
+![ED Resolve dashboard](docs/dashboard-preview.png)
 
+The dashboard makes four things visible in one place:
 
+1. **Current World** — what is happening now.
+2. **Hindsight Memory** — what previous experiences were recalled and whether they still apply.
+3. **Decision Layer** — what was proposed, what was rejected by constraints, and what was evaluated.
+4. **Counterfactual Simulation** — what each feasible intervention is expected to do.
 
-\# Operational State Model
+A fifth state is important for safety:
 
+5. **Safe Mode** — when the current regime has no executable resolution pathway, the system withholds autonomous action and requests human review.
 
+### Familiar regime
 
-The prototype represents operational state using structured variables such as:
-
-
-
-```text
-
-Patients in ED
-
-Boarding patients
-
-Pending transfers
-
-Unresolved transfers
-
-
-
-ICU capacity
-
-HDU capacity
-
-Beds waiting for cleaning
-
-
-
-Transport teams
-
-Transport queue
-
-
-
-Bed manager availability
-
-Senior coordinator availability
-
-```
-
-
-
-The state is transformed into a structured world model and a bottleneck fingerprint.
-
-
+A known operational regime where relevant previous experience exists.
 
 Example:
 
+```text
+ICU / HDU transfer delay
+        |
+        v
+BED_CLEANING is dominant
+        |
+        v
+Hindsight recalls relevant experience
+        |
+        v
+Applicability is high
+        |
+        v
+Feasible interventions are simulated
+        |
+        v
+EXPEDITE_BED_CLEANING selected
+```
 
+### Novel regime
+
+A deliberately unseen resource-collapse regime.
+
+The system may still retrieve memories, but the structural applicability gate prevents unrelated experiences from becoming a strong prior. When the current environment has no executable resolution pathway, the system enters Safe Mode.
+
+### UI decision flow
+
+![ED Resolve dashboard decision flow](docs/dashboard-flow.png)
+
+---
+
+## 7. Initial Prototype
+
+The first implementation focused on proving the core vertical slice:
 
 ```text
+Current State
+    |
+    v
+Bottleneck Detection
+    |
+    v
+Hindsight Recall
+    |
+    v
+Candidate Generation
+    |
+    v
+Counterfactual Simulation
+    |
+    v
+Decision
+```
 
+The prototype established that the core decision loop could run end-to-end, but it also exposed several weaknesses:
+
+- historical memory could be retrieved without sufficient state alignment
+- graph context was not yet strong enough to condition retrieval safely
+- the language model could propose operationally impossible actions without a hard feasibility layer
+- an unseen regime needed an explicit abstention path
+- simply adding memory did not demonstrate a changed final action in every controlled case
+
+These findings drove the final architecture instead of adding components purely for appearance.
+
+---
+
+## 8. Initial Prototype Findings
+
+### Memory ablation
+
+In a controlled synthetic comparison, memory changed the **candidate scoring evidence** but did not change the final selected action in that particular case.
+
+This is an important negative finding: ED Resolve does not claim that memory automatically improves every decision.
+
+### Retain → recall learning loop
+
+A completed episode was retained into Hindsight and a later episode was able to recall the stored operational experience and use it as bounded evidence.
+
+The prototype therefore demonstrated the persistence mechanism needed for an experience-based agent rather than a stateless prompt-response loop.
+
+### End-to-end execution
+
+A known ICU bed-cleaning episode successfully completed the full pipeline:
+
+```text
+state
+ -> graph-conditioned bottleneck
+ -> Hindsight recall
+ -> candidate generation
+ -> CP-SAT feasibility
+ -> SimPy counterfactuals
+ -> deterministic selection
+ -> outcome comparison
+ -> Hindsight retention
+```
+
+One verified synthetic run produced an expected resolution time of about **48.7 minutes** and an observed simulation outcome of about **48.1 minutes**, giving a prediction error of roughly **0.6 minutes**.
+
+These numbers belong to the synthetic simulator and are not clinical performance claims.
+
+---
+
+## 9. Final Architecture
+
+![ED Resolve architecture](docs/architecture.png)
+
+The final system separates memory, reasoning, feasibility, simulation, selection, and learning.
+
+### 9.1 Operational State
+
+Structured state represents the current operational environment, including ED boarding pressure, transfer requests, ICU/HDU availability, bed-cleaning state, transport resources, coordination availability, and escalation resources.
+
+### 9.2 World Model
+
+The raw state is transformed into a normalized world model exposing pressure, capacity, process delay, resource conflict, graph criticality, dominant dependency, and critical path.
+
+### 9.3 Bottleneck Fingerprint
+
+Example:
+
+```text
 Bottleneck:
-
-&#x20;   ICU\_BED\_CLEANING
-
-
-
-Capacity pressure:
-
-&#x20;   0.90
-
-
-
-Transport pressure:
-
-&#x20;   0.20
-
-
-
-Coordination pressure:
-
-&#x20;   0.00
-
-
-
-Process delay:
-
-&#x20;   0.73
-
-
-
-Resource conflict:
-
-&#x20;   0.80
-
-
+ICU_BED_CLEANING
 
 Dominant dependency:
+BED_CLEANING
 
-&#x20;   BED\_CLEANING
-
+Critical path:
+ED -> BED_CLEANING -> ICU
 ```
 
+This representation conditions both reasoning and memory applicability.
 
+### 9.4 Hindsight Memory
 
-These values are synthetic operational-model features used by the prototype.
+Relevant historical resolution experiences are recalled as evidence.
 
+### 9.5 Applicability Gate
 
+This is one of the most important final improvements.
 
-\---
+The system combines:
 
+- bottleneck match
+- scenario match
+- graph context
+- semantic relevance
 
+A globally similar memory that is structurally mismatched should not become a strong prior.
 
-\# Bottleneck Fingerprint
+### 9.6 Candidate Generation
 
-
-
-```mermaid
-
-flowchart LR
-
-
-
-&#x20;   A\["Raw Operational State"] --> B\["Capacity Pressure"]
-
-
-
-&#x20;   A --> C\["Transport Pressure"]
-
-
-
-&#x20;   A --> D\["Coordination Pressure"]
-
-
-
-&#x20;   A --> E\["Process Delay"]
-
-
-
-&#x20;   A --> F\["Resource Conflict"]
-
-
-
-&#x20;   B --> G\["Bottleneck Fingerprint"]
-
-&#x20;   C --> G
-
-&#x20;   D --> G
-
-&#x20;   E --> G
-
-&#x20;   F --> G
-
-
-
-&#x20;   G --> H\["Dominant Dependency"]
-
-```
-
-
-
-The fingerprint gives the memory and reasoning layers a normalized representation of the operational situation.
-
-
-
-\---
-
-
-
-\# Current Intervention Space
-
-
-
-The prototype currently supports a bounded operational action space:
-
-
+GPT-OSS proposes a bounded action set:
 
 ```text
-
 WAIT
-
-EXPEDITE\_BED\_CLEANING
-
-REQUEST\_ALTERNATIVE\_UNIT
-
-PRIORITIZE\_TRANSPORT
-
-ESCALATE\_TO\_BED\_MANAGER
-
+EXPEDITE_BED_CLEANING
+REQUEST_ALTERNATIVE_UNIT
+PRIORITIZE_TRANSPORT
+ESCALATE_TO_BED_MANAGER
 ```
 
+The model proposes. It does not directly select.
 
+### 9.7 Hard Constraints
 
-Constraining the action space improves:
+OR-Tools CP-SAT removes interventions that are not executable in the current state.
 
-
-
-\- interpretability
-
-\- counterfactual reproducibility
-
-\- evaluation
-
-\- auditability
-
-
-
-The same architecture can later support a larger intervention space.
-
-
-
-\---
-
-
-
-\# Counterfactual Simulation
-
-
-
-EDResolve uses a discrete-event operational simulator to compare feasible interventions.
-
-
-
-```mermaid
-
-flowchart TD
-
-
-
-&#x20;   A\["Current State"] --> B\["Candidate Action"]
-
-
-
-&#x20;   B --> C\["SimPy Event Model"]
-
-
-
-&#x20;   C --> D\["Resources"]
-
-
-
-&#x20;   C --> E\["Queues"]
-
-
-
-&#x20;   C --> F\["Transfer Events"]
-
-
-
-&#x20;   D --> G\["State Evolution"]
-
-&#x20;   E --> G
-
-&#x20;   F --> G
-
-
-
-&#x20;   G --> H\["Resolution Outcome"]
-
-
-
-&#x20;   H --> I\["Operational Metrics"]
-
-
-
-&#x20;   I --> J\["Decision Engine"]
-
-```
-
-
-
-The simulator currently evaluates signals such as:
-
-
-
-\- resolution status
-
-\- resolution time
-
-\- boarding time
-
-\- escalation count
-
-\- resource conflicts
-
-\- utility score
-
-
-
-The synthetic simulator is an \*\*algorithm-development environment\*\* and is not evidence of real-world hospital performance.
-
-
-
-\---
-
-
-
-\# Experiential Learning
-
-
-
-The learning loop compares predicted consequences with observed consequences.
-
-
-
-```mermaid
-
-flowchart LR
-
-
-
-&#x20;   A\["Counterfactual Prediction"] --> B\["Selected Action"]
-
-
-
-&#x20;   B --> C\["Observed Outcome"]
-
-
-
-&#x20;   A --> D\["Expected"]
-
-
-
-&#x20;   C --> E\["Actual"]
-
-
-
-&#x20;   D --> F\["Prediction Error"]
-
-&#x20;   E --> F
-
-
-
-&#x20;   F --> G\["Lesson"]
-
-
-
-&#x20;   G --> H\["Hindsight Retain"]
-
-
-
-&#x20;   H --> I\["Future Recall"]
-
-```
-
-
-
-For example:
-
-
+Example:
 
 ```text
-
-Expected resolution:
-
-25 minutes
-
-
-
-Observed resolution:
-
-34 minutes
-
-
-
-Prediction error:
-
-9 minutes
-
+REQUEST_ALTERNATIVE_UNIT
+        |
+        v
+No alternative HDU capacity
+        |
+        v
+INFEASIBLE
 ```
 
+### 9.8 Counterfactual Simulation
 
+SimPy evaluates feasible interventions before final selection.
 
-The resulting lesson becomes part of future experiential retrieval.
+Tracked synthetic outcomes include:
 
+- resolution status
+- resolution time
+- boarding time
+- escalation count
+- resource conflicts
+- utility
 
+### 9.9 Deterministic Selection
 
-\---
+Final action selection uses the validated simulation results, current-state feasibility, and bounded experiential support rather than allowing the LLM to directly control the final action.
 
+### 9.10 Outcome Learning
 
+Expected and actual outcomes are compared. The resulting prediction error becomes part of the retained experience.
 
-\# Failure as Experience
+---
 
+## 10. Initial → Final Engineering Evolution
 
+![Initial to final evolution](docs/initial-vs-final.png)
 
-EDResolve does not only remember successful interventions.
+The final project improved the initial loop in several concrete ways:
 
+| Area | Initial approach | Final approach |
+|---|---|---|
+| **State representation** | Basic operational state | Graph-conditioned world model + bottleneck fingerprint |
+| **Memory** | Recall similar experience | Recall + current-state applicability validation |
+| **Historical influence** | Qualitative evidence | Bounded experiential prior |
+| **Operational feasibility** | Candidate reasoning | CP-SAT hard constraints |
+| **Intervention evaluation** | Basic reasoning | SimPy counterfactual comparison |
+| **Decision authority** | Too close to model output | Deterministic selection layer |
+| **Unseen regimes** | No explicit abstention path | Safe Mode + human review |
+| **Learning** | Episode output | Expected-vs-actual + prediction error + retention |
+| **Graph reasoning** | Limited | Dominant dependency + critical path + applicability context |
+| **Interface** | Prototype view | Full decision-support dashboard with familiar/novel regimes |
 
+---
 
-A failed intervention can also become valuable institutional experience.
+## 11. Synthetic Scenario Suite
 
+The prototype uses controlled operational scenarios including:
 
-
-```mermaid
-
-flowchart TD
-
-
-
-&#x20;   A\["Operational Bottleneck"] --> B\["Intervention"]
-
-
-
-&#x20;   B --> C\["Failure"]
-
-
-
-&#x20;   C --> D\["Failure Analysis"]
-
-
-
-&#x20;   D --> E\["Lesson"]
-
-
-
-&#x20;   E --> F\["Hindsight Memory"]
-
-
-
-&#x20;   F --> G\["Future Candidate Evaluation"]
-
-
-
-&#x20;   G --> H\["Potentially Avoid Repetition"]
-
+```text
+ICU_BED_CLEANING
+TRANSPORT_BOTTLENECK
+ALTERNATIVE_UNIT_AVAILABLE
+COORDINATION_DEADLOCK
+MIXED_BOTTLENECK
+CASCADE_RESOURCE_COLLAPSE_X53
 ```
 
+The final unseen-regime test deliberately creates a structurally unseen state. The applicability gate returns **LOW**, historical prior influence is removed, and the simulator can trigger Safe Mode when no executable resolution path remains.
 
+This is the intended behavior:
 
-This is important for an experiential system:
+> **When the current environment is outside the learned and executable regime, ED Resolve should be able to withhold autonomous action.**
 
+---
 
+## 12. Why the Design Is Distinct
 
-> \*\*A failure can contain information about where an intervention should not be reused.\*\*
+The project should not be framed as "an AI that predicts hospital bottlenecks." That area is already commercially and academically active.
 
+The design distinction we explore is the combination of:
 
+1. **Institution-specific experiential memory** through Hindsight.
+2. **Current-state applicability validation** before experience strongly influences a decision.
+3. **Hard operational feasibility** using CP-SAT.
+4. **Counterfactual intervention testing** using SimPy.
+5. **Deterministic final action selection** instead of direct LLM control.
+6. **Expected-vs-actual learning** through prediction error.
+7. **Safe abstention** when the current regime has no executable resolution pathway.
 
-\---
+The claim is therefore about the **decision loop**, not about any one component in isolation.
 
+---
 
+## 13. Evaluation Strategy
 
-\# Evaluation Strategy
+The evaluation is designed to isolate the contribution of memory and the contribution of simulation.
 
+Planned comparison structure:
 
-
-The goal is not simply to measure the final system.
-
-
-
-The evaluation should isolate the contribution of memory.
-
-
-
-```mermaid
-
-flowchart LR
-
-
-
-&#x20;   A\["Stateless Baseline"] --> B\["Memory Recall"]
-
-
-
-&#x20;   B --> C\["Memory + Simulation"]
-
-
-
-&#x20;   C --> D\["Full Learning Loop"]
-
-```
-
-
-
-The evaluation framework is designed around controlled comparisons such as:
-
-
-
-| Configuration | Memory | Simulation | Learning |
-
+| Configuration | Hindsight | Simulation | Learning |
 |---|---:|---:|---:|
-
 | Stateless baseline | No | No | No |
-
 | Memory system | Yes | No | No |
-
 | Memory + simulation | Yes | Yes | No |
+| Full ED Resolve | Yes | Yes | Yes |
 
-| Full EDResolve | Yes | Yes | Yes |
+Useful metrics include:
 
+- resolution time
+- ED boarding time
+- resolution rate
+- P90 resolution time
+- escalation count
+- resource conflicts
+- memory reuse
+- repeated failed-action rate
+- prediction error
+- learning gain
 
+Experiments use controlled synthetic scenarios and reproducible seeds. No real-world clinical performance claim is inferred from these simulations.
 
-Planned evaluation metrics include:
+---
 
+## 14. Impact
 
+### Prototype-level impact
 
-\- resolution time
+ED Resolve demonstrates a path from:
 
-\- ED boarding time
+**stateless recommendation → experiential decision support**
 
-\- resolution rate
+The intended benefit is not simply that the system remembers more. It is that previous operational experience becomes something the decision process can:
 
-\- P90 resolution time
+- retrieve
+- validate
+- constrain
+- test
+- compare
+- learn from
 
-\- escalation count
+The Safe Mode path also provides an explicit mechanism for saying:
 
-\- resource conflicts
+> **The system does not have enough executable evidence to act autonomously here.**
 
-\- memory reuse
+That is a stronger design boundary than forcing a recommendation for every state.
 
-\- repeated failed-action rate
+### What is not claimed
 
-\- prediction error
+This prototype does not claim:
 
-\- learning gain
+- improved patient outcomes
+- reduced real-world ED boarding
+- regulatory approval
+- clinical efficacy
+- hospital deployment readiness
 
+Those would require prospective validation, domain governance, security/privacy controls, interoperability testing, and clinical/operational review.
 
+---
 
-Experiments should use controlled synthetic scenarios and reproducible seeds.
+## 15. Future Scope
 
+### Near-term engineering
 
+- durable PostgreSQL state and audit storage
+- SQLAlchemy/Alembic migrations
+- PM4Py workflow mining from event logs
+- richer process-level telemetry
+- expanded intervention/action space
+- automated evaluation harness
+- stronger ablation reporting
 
-No real-world performance claim is inferred from synthetic experiments.
+### Research extensions
 
+- repeated-episode longitudinal evaluation
+- explicit memory-quality metrics
+- retrieval precision vs decision quality
+- state-conditioned memory benchmarks
+- simulation-calibration studies
+- tail-risk-aware intervention selection
+- transfer across hospitals or operating regimes
 
+### Production boundary
 
-\---
+A real deployment would additionally require:
 
+- domain-specific validation
+- privacy/security controls
+- access management
+- audit governance
+- hospital interoperability
+- FHIR-compatible integration boundaries
+- human oversight
+- regulatory assessment where applicable
 
+---
 
-\# Synthetic Scenario Suite
-
-
-
-The current prototype contains several operational scenario classes:
-
-
+## 16. Repository Structure
 
 ```text
-
-ICU\_BED\_CLEANING
-
-TRANSPORT\_BOTTLENECK
-
-ALTERNATIVE\_UNIT\_AVAILABLE
-
-COORDINATION\_DEADLOCK
-
-MIXED\_BOTTLENECK
-
-```
-
-
-
-These scenarios are designed to stress different parts of the decision pipeline:
-
-
-
-```mermaid
-
-flowchart TD
-
-
-
-&#x20;   A\["Scenario Suite"]
-
-
-
-&#x20;   A --> B\["Bed Bottleneck"]
-
-&#x20;   A --> C\["Transport Bottleneck"]
-
-&#x20;   A --> D\["Alternative Capacity"]
-
-&#x20;   A --> E\["Coordination Deadlock"]
-
-&#x20;   A --> F\["Mixed Bottleneck"]
-
-
-
-&#x20;   B --> G\["Candidate Generation"]
-
-&#x20;   C --> G
-
-&#x20;   D --> G
-
-&#x20;   E --> G
-
-&#x20;   F --> G
-
-
-
-&#x20;   G --> H\["Constraints"]
-
-
-
-&#x20;   H --> I\["Counterfactuals"]
-
-
-
-&#x20;   I --> J\["Decision"]
-
-
-
-&#x20;   J --> K\["Outcome"]
-
-
-
-&#x20;   K --> L\["Learning"]
-
-```
-
-
-
-\---
-
-
-
-\# Full System Architecture
-
-
-
-```mermaid
-
-flowchart TB
-
-
-
-&#x20;   subgraph UI\["Presentation Layer"]
-
-&#x20;       R\["React / TypeScript"]
-
-&#x20;   end
-
-
-
-&#x20;   subgraph API\["Application Layer"]
-
-&#x20;       F\["FastAPI"]
-
-&#x20;       L\["LangGraph"]
-
-&#x20;   end
-
-
-
-&#x20;   subgraph INT\["Intelligence Layer"]
-
-&#x20;       G\["GPT-OSS"]
-
-&#x20;       H\["Hindsight"]
-
-&#x20;   end
-
-
-
-&#x20;   subgraph MODEL\["Operational Modeling"]
-
-&#x20;       N\["NetworkX"]
-
-&#x20;       P\["PM4Py"]
-
-&#x20;       X\["XGBoost"]
-
-&#x20;   end
-
-
-
-&#x20;   subgraph OPT\["Decision Layer"]
-
-&#x20;       O\["OR-Tools"]
-
-&#x20;       S\["SimPy"]
-
-&#x20;   end
-
-
-
-&#x20;   subgraph DATA\["Persistence"]
-
-&#x20;       DB\["PostgreSQL"]
-
-&#x20;   end
-
-
-
-&#x20;   R --> F
-
-&#x20;   F --> L
-
-
-
-&#x20;   L --> G
-
-&#x20;   L --> H
-
-
-
-&#x20;   L --> N
-
-&#x20;   L --> P
-
-&#x20;   L --> X
-
-
-
-&#x20;   G --> O
-
-&#x20;   N --> O
-
-&#x20;   P --> O
-
-
-
-&#x20;   O --> S
-
-&#x20;   S --> L
-
-
-
-&#x20;   L --> DB
-
-
-
-&#x20;   H --> L
-
-&#x20;   L --> H
-
-```
-
-
-
-\---
-
-
-
-\# Data Flow
-
-
-
-```mermaid
-
-sequenceDiagram
-
-
-
-&#x20;   participant UI as React UI
-
-&#x20;   participant API as FastAPI
-
-&#x20;   participant Agent as LangGraph
-
-&#x20;   participant H as Hindsight
-
-&#x20;   participant LLM as GPT-OSS
-
-&#x20;   participant C as Constraints
-
-&#x20;   participant Sim as SimPy
-
-&#x20;   participant DB as PostgreSQL
-
-
-
-&#x20;   UI->>API: Current operational case
-
-&#x20;   API->>Agent: ED operational state
-
-
-
-&#x20;   Agent->>Agent: Build world model
-
-&#x20;   Agent->>Agent: Identify bottleneck
-
-
-
-&#x20;   Agent->>H: Recall similar experiences
-
-&#x20;   H-->>Agent: Historical experiences
-
-
-
-&#x20;   Agent->>LLM: Generate candidate interventions
-
-&#x20;   LLM-->>Agent: Candidate actions
-
-
-
-&#x20;   Agent->>C: Validate constraints
-
-&#x20;   C-->>Agent: Feasibility results
-
-
-
-&#x20;   Agent->>Sim: Simulate feasible alternatives
-
-&#x20;   Sim-->>Agent: Counterfactual outcomes
-
-
-
-&#x20;   Agent->>Agent: Select action
-
-&#x20;   Agent->>DB: Persist decision trace
-
-
-
-&#x20;   Agent->>Agent: Observe outcome
-
-&#x20;   Agent->>Agent: Calculate prediction error
-
-
-
-&#x20;   Agent->>H: Retain completed experience
-
-
-
-&#x20;   Agent-->>API: Decision + evidence + trace
-
-&#x20;   API-->>UI: Explainable decision view
-
-```
-
-
-
-\---
-
-
-
-\# Auditability
-
-
-
-Each major stage produces structured information that can be exposed through the interface.
-
-
-
-```mermaid
-
-flowchart TD
-
-
-
-&#x20;   A\["State"] --> B\["World Model"]
-
-&#x20;   B --> C\["Bottleneck"]
-
-&#x20;   C --> D\["Memory"]
-
-&#x20;   D --> E\["Candidates"]
-
-&#x20;   E --> F\["Constraints"]
-
-&#x20;   F --> G\["Counterfactuals"]
-
-&#x20;   G --> H\["Decision"]
-
-&#x20;   H --> I\["Outcome"]
-
-&#x20;   I --> J\["Learning"]
-
-```
-
-
-
-A judge, developer, or operator should be able to inspect:
-
-
-
-\- which experiences were retrieved
-
-\- which candidates were generated
-
-\- which actions were infeasible
-
-\- what the simulator predicted
-
-\- why the selected action had the lowest modeled cost
-
-\- what actually happened
-
-\- what was retained for future decisions
-
-
-
-\---
-
-
-
-\# Interoperability Boundary
-
-
-
-The design anticipates a FHIR-compatible interoperability boundary between hospital data sources and the EDResolve operational model.
-
-
-
-```mermaid
-
-flowchart LR
-
-
-
-&#x20;   A\["Hospital Information Systems"] --> B\["FHIR-Compatible Boundary"]
-
-
-
-&#x20;   B --> C\["EDResolve Operational State"]
-
-
-
-&#x20;   C --> D\["World Model"]
-
-
-
-&#x20;   D --> E\["Decision + Simulation + Memory"]
-
-
-
-&#x20;   E --> F\["Human Operational Review"]
-
-```
-
-
-
-FHIR is treated as an interoperability boundary, not as the internal reasoning mechanism.
-
-
-
-\---
-
-
-
-\# Safety and Scope
-
-
-
-EDResolve is an \*\*operational decision-support research prototype\*\*.
-
-
-
-It is not intended to:
-
-
-
-\- diagnose patients
-
-\- prescribe medication
-
-\- recommend clinical treatment
-
-\- replace clinicians
-
-\- autonomously make clinical decisions
-
-\- claim regulatory approval
-
-\- represent a production hospital information system
-
-
-
-The current evaluation environment is synthetic.
-
-
-
-A production deployment would require domain-specific validation, security, privacy protection, governance, human oversight, interoperability validation, and appropriate regulatory assessment.
-
-
-
-\---
-
-
-
-\# Repository Structure
-
-
-
-```text
-
-ED Resolve/
-
-│
-
+ED-Resolve/
 ├── backend/
-
-│   │
-
 │   ├── agent/
-
-│   │   ├── \_\_init\_\_.py
-
-│   │   ├── state.py
-
-│   │   ├── prompts.py
-
-│   │   ├── nodes.py
-
-│   │   ├── graph.py
-
-│   │   ├── decision.py
-
-│   │   └── outcome.py
-
-│   │
-
 │   ├── memory/
-
-│   │   └── hindsight\_memory.py
-
-│   │
-
 │   └── simulation/
-
-│       ├── \_\_init\_\_.py
-
-│       ├── models.py
-
-│       ├── actions.py
-
-│       ├── constraints.py
-
-│       ├── ed\_simulator.py
-
-│       └── metrics.py
-
-│
-
 ├── data/
-
 │   └── synthetic/
-
-│
-
-├── experiments/
-
-│
-
 ├── frontend/
-
-│
-
-├── .env
-
+│   └── static/
+├── scripts/
+├── docs/
+│   ├── dashboard-preview.png
+│   ├── dashboard-flow.png
+│   ├── architecture.png
+│   ├── hindsight-loop.png
+│   └── initial-vs-final.png
+├── .env.example
 ├── .gitignore
-
+├── requirements.txt
 └── README.md
-
 ```
 
+---
 
+## 17. Local Demo
 
-\---
+### Requirements
 
+- Python 3.13+
+- Hindsight 0.10.1
+- Groq API access for GPT-OSS
 
-
-\# Development Setup
-
-
-
-\## Requirements
-
-
-
-\- Python 3.13+
-
-\- Node.js
-
-\- Hindsight
-
-\- Groq API access for GPT-OSS
-
-\- PostgreSQL
-
-
-
-\## Backend
-
-
+### Setup
 
 ```powershell
-
 python -m venv .venv
-
-.venv\\Scripts\\Activate.ps1
-
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 ```
 
+Create a local `.env` from `.env.example` and keep credentials out of Git.
 
-
-Install the current backend dependencies:
-
-
+Start Hindsight in one terminal:
 
 ```powershell
-
-pip install hindsight-client hindsight-api groq langgraph fastapi uvicorn pydantic simpy networkx pandas numpy scipy sqlalchemy psycopg\[binary] ortools pytest
-
+hindsight-api --host 127.0.0.1 --port 8888
 ```
 
-
-
-\---
-
-
-
-\# Environment Variables
-
-
-
-Create a local `.env`:
-
-
-
-```env
-
-GROQ\_API\_KEY=your\_groq\_api\_key
-
-
-
-HINDSIGHT\_API\_URL=http://localhost:8888
-
-HINDSIGHT\_API\_KEY=
-
-
-
-HINDSIGHT\_BANK\_ID=edresolve
-
-
-
-EDRESOLVE\_REASONING\_MODEL=openai/gpt-oss-120b
-
-```
-
-
-
-Never commit credentials or `.env` to Git.
-
-
-
-\---
-
-
-
-\# Running Hindsight
-
-
-
-Start the local Hindsight service:
-
-
+Start ED Resolve in another terminal:
 
 ```powershell
-
-hindsight-api
-
+uvicorn frontend.server:app --host 127.0.0.1 --port 8000
 ```
 
-
-
-The local development configuration uses:
-
-
+Open:
 
 ```text
-
-http://localhost:8888
-
+http://127.0.0.1:8000
 ```
 
+The dashboard provides the familiar and novel synthetic regimes used in the demo.
 
+---
 
-\---
+## 18. Research Question
 
+ED Resolve explores a broader operational-agent question:
 
-
-\# Running the Synthetic Simulation
-
-
-
-```powershell
-
-python -m backend.simulation.run\_counterfactuals
-
-```
-
-
-
-Generated synthetic experiment data is stored under:
-
-
-
-```text
-
-data/synthetic/
-
-```
-
-
-
-\---
-
-
-
-\# Engineering Principles
-
-
-
-\### Memory is contextual
-
-
-
-Past experience is evidence, not an instruction.
-
-
-
-\### Feasibility is deterministic
-
-
-
-The LLM cannot override hard operational constraints.
-
-
-
-\### Simulation precedes selection
-
-
-
-Candidate interventions are evaluated before final selection.
-
-
-
-\### Failures are retained
-
-
-
-Unsuccessful interventions can become future negative experience.
-
-
-
-\### Decisions are auditable
-
-
-
-The system preserves the path from state to decision to outcome.
-
-
-
-\### Evaluation is ablation-driven
-
-
-
-The contribution of memory should be measured against controlled baselines.
-
-
-
-\---
-
-
-
-\# Current Project Status
-
-
-
-\## Implemented
-
-
-
-\- Operational state models
-
-\- Bottleneck fingerprinting
-
-\- Hindsight integration
-
-\- Hindsight recall
-
-\- GPT-OSS candidate generation
-
-\- Constraint validation
-
-\- SimPy counterfactual simulation
-
-\- Deterministic action selection
-
-\- Expected-vs-actual analysis
-
-\- Experience construction
-
-\- LangGraph orchestration foundation
-
-
-
-\## In Development
-
-
-
-\- Complete end-to-end learning loop
-
-\- Hindsight retention in live execution
-
-\- Repeated-episode learning experiments
-
-\- Ablation framework
-
-\- PostgreSQL persistence
-
-\- React / TypeScript interface
-
-\- Decision-trace visualization
-
-\- Memory-learning visualization
-
-
-
-\---
-
-
-
-\# Research Question
-
-
-
-EDResolve explores a broader question:
-
-
-
-> \*\*Can an operational agent reuse institution-specific experience, test that experience against a changing environment, and reduce repeated decision failures over time?\*\*
-
-
+> **Can an operational agent reuse institution-specific experience, test that experience against a changing environment, and improve repeated intervention decisions without blindly replaying the past?**
 
 The architecture therefore moves beyond:
 
+```text
+Prompt -> Answer
+```
 
+and toward:
 
 ```text
-
-Prompt → Answer
-
+State
+ -> Experience
+ -> Applicability
+ -> Feasibility
+ -> Counterfactuals
+ -> Decision
+ -> Outcome
+ -> Learning
 ```
 
+---
 
+## References
 
-toward:
+1. [PubMed — Causes of Delayed Transfers From the Emergency Department to Speciality Units](https://pubmed.ncbi.nlm.nih.gov/42326213/)
+2. [PMC — Full-text study](https://pmc.ncbi.nlm.nih.gov/articles/PMC13275199/)
+3. [GE HealthCare — CareIntellect for Operations](https://www.gehealthcare.com/en-us/products/software/careintellect/careintellect-for-operations)
+4. [GE HealthCare — CareIntellect announcement, September 15, 2026](https://www.gehealthcare.com/en-us/about/newsroom/press-releases/ge-healthcare-announces-careintellect-for-operations-helping-health-systems-optimize-resources-and-expand-access-to-care)
+5. [ACL 2026 — SAMem: State-Aware Memory as a Fine-Grained Memory for LLM Agents in Decision-Making](https://aclanthology.org/2026.findings-acl.722/)
+6. [Hindsight documentation](https://docs.hindsight.vectorize.io/)
+7. [Hindsight GitHub](https://github.com/vectorize-io/hindsight)
+8. [Hindsight research paper](https://arxiv.org/abs/2512.12818)
 
+---
 
+## Team
 
-```mermaid
+**GEOMETROGENESIS**  
+**ED Resolve**
 
-flowchart LR
-
-
-
-&#x20;   A\["State"] --> B\["Experience"]
-
-&#x20;   B --> C\["Reasoning"]
-
-&#x20;   C --> D\["Counterfactual Evaluation"]
-
-&#x20;   D --> E\["Decision"]
-
-&#x20;   E --> F\["Outcome"]
-
-&#x20;   F --> G\["Learned Experience"]
-
-&#x20;   G --> B
-
-```
-
-
-
-The system is designed around the idea that \*\*experience should become an active computational resource for future decisions\*\*.
-
-
-
-\---
-
-
-
-\# License
-
-
-
-This project is intended to use the MIT License.
-
-
-
-See `LICENSE` for the complete license text.
-
+Built as an operational research prototype with a synthetic evaluation environment.
