@@ -1196,6 +1196,58 @@
         1.55;
     }
 
+    .decision-memory {
+
+      margin-top:
+        14px;
+
+      padding:
+        12px;
+
+      border:
+        1px solid
+        var(--border-soft);
+
+      border-radius:
+        12px;
+
+      background:
+        var(--surface-2);
+    }
+
+    .decision-memory-title {
+
+      margin-bottom:
+        8px;
+
+      font-size:
+        9px;
+
+      font-weight:
+        900;
+
+      letter-spacing:
+        .10em;
+
+      color:
+        var(--muted);
+    }
+
+    .decision-memory-note {
+
+      margin-top:
+        8px;
+
+      font-size:
+        10px;
+
+      line-height:
+        1.45;
+
+      color:
+        var(--muted);
+    }
+
     .status-pill {
 
       display:
@@ -2388,6 +2440,32 @@
         </div>
 
 
+        <div class="data-row">
+
+          <span>
+            Failed experiences
+          </span>
+
+          <strong id="failedMemoryCount">
+            —
+          </strong>
+
+        </div>
+
+
+        <div class="data-row">
+
+          <span>
+            Successful experiences
+          </span>
+
+          <strong id="successfulMemoryCount">
+            —
+          </strong>
+
+        </div>
+
+
         <div
           class="memory-description"
           id="memoryDescription"
@@ -2428,6 +2506,40 @@
           id="decisionReason"
         >
           The model never lets memory directly choose the action. Feasibility checks and counterfactual simulation come first.
+        </div>
+
+
+        <div
+          class="decision-memory"
+          id="decisionMemory"
+        >
+
+          <div class="decision-memory-title">
+            WHAT MEMORY CHANGED
+          </div>
+
+          <div class="data-row">
+            <span>Current simulation</span>
+            <strong id="decisionBaselineScore">—</strong>
+          </div>
+
+          <div class="data-row">
+            <span>Memory-adjusted score</span>
+            <strong id="decisionAdjustedScore">—</strong>
+          </div>
+
+          <div class="data-row">
+            <span>Historical support</span>
+            <strong id="decisionMemorySupport">—</strong>
+          </div>
+
+          <div
+            class="decision-memory-note"
+            id="decisionMemoryNote"
+          >
+            Memory is bounded evidence, not decision authority.
+          </div>
+
         </div>
 
 
@@ -2934,10 +3046,17 @@
         return;
       }
 
-      // Keep the published/demo view dark by default so screenshots and
-      // recordings remain visually consistent. Users can still switch
-      // to light mode with the theme button.
-      applyTheme("dark");
+      const preferredLight =
+        window.matchMedia &&
+        window.matchMedia(
+          "(prefers-color-scheme: light)"
+        ).matches;
+
+      applyTheme(
+        preferredLight
+          ? "light"
+          : "dark"
+      );
 
     })();
 
@@ -3173,11 +3292,78 @@
           )}%`;
 
 
+      const memoryItems =
+        Array.isArray(data.recalled_experiences)
+          ? data.recalled_experiences
+          : [];
+
+      const failedMemories = memoryItems.filter(
+        memory => {
+          const metadata =
+            memory?.metadata || {};
+
+          const tags =
+            Array.isArray(memory?.tags)
+              ? memory.tags.map(
+                  tag => String(tag).toLowerCase()
+                )
+              : [];
+
+          const status =
+            String(
+              metadata.resolution_status ||
+              ""
+            ).toLowerCase();
+
+          return (
+            status === "unresolved" ||
+            status === "failed" ||
+            tags.includes("failed")
+          );
+        }
+      ).length;
+
+      const successfulMemories = memoryItems.filter(
+        memory => {
+          const metadata =
+            memory?.metadata || {};
+
+          const tags =
+            Array.isArray(memory?.tags)
+              ? memory.tags.map(
+                  tag => String(tag).toLowerCase()
+                )
+              : [];
+
+          const status =
+            String(
+              metadata.resolution_status ||
+              ""
+            ).toLowerCase();
+
+          return (
+            status === "resolved" ||
+            status === "successful" ||
+            tags.includes("successful")
+          );
+        }
+      ).length;
+
       setText(
         "memoryCount",
         applicability.memory_count ??
-          data.recalled_experiences?.length ??
+          memoryItems.length ??
           "0"
+      );
+
+      setText(
+        "failedMemoryCount",
+        failedMemories
+      );
+
+      setText(
+        "successfulMemoryCount",
+        successfulMemories
       );
 
 
@@ -3235,10 +3421,99 @@
           "decisionStatus"
         );
 
+      const decisionMemory =
+        document.getElementById(
+          "decisionMemory"
+        );
+
+      const selectedAction =
+        decision?.selected_action ||
+        "";
+
+      const simulationResult =
+        counterfactuals.find(
+          item =>
+            item.action ===
+            selectedAction
+        );
+
+      const baselineScore =
+        simulationResult?.utility_score;
+
+      const adjustedScore =
+        decision?.experience_adjusted_scores
+          ? decision.experience_adjusted_scores[
+              selectedAction
+            ]
+          : undefined;
+
+      const memorySupport =
+        decision?.experience_support
+          ? decision.experience_support[
+              selectedAction
+            ]
+          : undefined;
+
+      setText(
+        "decisionBaselineScore",
+        baselineScore !== undefined
+          ? formatNumber(
+              baselineScore,
+              2
+            )
+          : "—"
+      );
+
+      setText(
+        "decisionAdjustedScore",
+        adjustedScore !== undefined
+          ? formatNumber(
+              adjustedScore,
+              2
+            )
+          : "—"
+      );
+
+      setText(
+        "decisionMemorySupport",
+        memorySupport !== undefined
+          ? formatNumber(
+              memorySupport,
+              2
+            )
+          : "—"
+      );
+
+      if (
+        memorySupport !== undefined &&
+        baselineScore !== undefined &&
+        adjustedScore !== undefined
+      ) {
+        const direction =
+          adjustedScore < baselineScore
+            ? "reduced"
+            : adjustedScore > baselineScore
+              ? "increased"
+              : "did not change";
+
+        setText(
+          "decisionMemoryNote",
+          `Historical evidence ${direction} the selected action's bounded score. Current-world simulation remained authoritative.`
+        );
+      } else {
+        setText(
+          "decisionMemoryNote",
+          "Memory is bounded evidence, not decision authority."
+        );
+      }
 
       if (
         decision
       ) {
+
+        decisionMemory.classList.remove(
+          "hidden"
+        );
 
         decisionAction.textContent =
           decision.selected_action ??
@@ -3258,6 +3533,10 @@
           "status-pill good";
 
       } else {
+
+        decisionMemory.classList.add(
+          "hidden"
+        );
 
         decisionAction.textContent =
           safeMode.active

@@ -1117,10 +1117,36 @@ def recall_experiences(
         bank_id=DEFAULT_BANK_ID,
     )
 
+    # Optional tag filter used by controlled Memory Matters
+    # experiments. Normal production runs remain unfiltered.
+    recall_tags = state.get(
+        "memory_recall_tags",
+        None,
+    )
+
+    if recall_tags is not None:
+        if isinstance(recall_tags, str):
+            recall_tags = [
+                tag.strip()
+                for tag in recall_tags.split(",")
+                if tag.strip()
+            ]
+
+        elif isinstance(recall_tags, list):
+            recall_tags = [
+                str(tag).strip()
+                for tag in recall_tags
+                if str(tag).strip()
+            ]
+
+        else:
+            recall_tags = None
+
     try:
 
         recalled = memory.recall_experiences(
             query=query,
+            tags=recall_tags,
         )
 
         experiences: list[dict[str, Any]] = []
@@ -1205,6 +1231,7 @@ def recall_experiences(
                         "memory_count": (
                             len(experiences)
                         ),
+                        "recall_tags": recall_tags,
                     },
                 )
             ],
@@ -1215,7 +1242,6 @@ def recall_experiences(
     finally:
 
         memory.close()
-
 
 # ---------------------------------------------------------------------------
 # 5. Generate Candidate Actions

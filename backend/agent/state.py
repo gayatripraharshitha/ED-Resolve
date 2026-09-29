@@ -259,6 +259,11 @@ class EDResolveState(TypedDict, total=False):
 
     # Hindsight
     memory_query: str
+
+    # Optional tag filter for controlled Memory Matters experiments.
+    # Normal production runs leave this as None.
+    memory_recall_tags: list[str] | None
+
     recalled_experiences: list[dict[str, Any]]
     experience_applicability: dict[str, Any]
     reflection: str

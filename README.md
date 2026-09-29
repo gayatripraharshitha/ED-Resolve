@@ -2,7 +2,7 @@
 
 ## Experiential Operational Decision Support for Emergency Department Flow
 
-**Team:** GEOMETROGENESIS  
+**Team:** GEOMETROGENESIS
 **Project:** ED Resolve
 
 ![ED Resolve dashboard](docs/dashboard-final.png)
@@ -69,7 +69,7 @@ The implementation is separated into layers so that memory, reasoning, feasibili
 
 ### Planned extensions
 
-PostgreSQL + SQLAlchemy/Alembic, PM4Py, and a richer production frontend are planned extensions rather than completed parts of the current vertical slice.
+PostgreSQL + SQLAlchemy/Alembic, PM4Py, richer hospital event streams, and a more production-oriented frontend are planned extensions rather than completed parts of the current vertical slice.
 
 ---
 
@@ -98,50 +98,92 @@ This is closely related to recent work on state-aware memory for LLM agents. The
 
 Hindsight is not used as generic conversation history. It is the **long-term experiential memory layer** of ED Resolve.
 
-A completed episode can contribute experience about:
+A completed operational episode can contribute experience about:
 
-- the operational conditions
-- the bottleneck
-- the dependency structure
-- interventions considered
+- operational conditions
+- bottleneck identity
+- scenario context
+- graph/dependency context
+- actions considered
 - hard constraints
 - expected consequences
-- the selected action
-- the observed outcome
-- the prediction error
-- the reusable lesson
+- selected action
+- observed outcome
+- prediction error
+- reusable lesson
 
-### Hindsight loop
+### Hindsight retain → recall loop
 
-```mermaid
-flowchart LR
-    A[Completed episode] --> B[Hindsight retain]
-    B --> C[Future episode]
-    C --> D[Hindsight recall]
-    D --> E[Applicability gate]
-    E --> F[Bounded experiential evidence]
-    F --> G[Current-state decision process]
-    G --> H[Outcome + prediction error]
-    H --> B
-```
+![ED Resolve Hindsight loop](docs/hindsight-loop.svg)
 
-The critical safety idea is:
+The project uses a dedicated ED Resolve memory bank and the Hindsight `retain()` / `recall()` flow to persist and reuse operational episodes.
 
-> **A previous success becomes evidence for a new decision, not a hard-coded rule.**
+The retain → recall path has been verified with the ED Resolve test flow. Previous experiences can include both successful and failed operational approaches, so the memory layer is not limited to a list of actions that happened to work once.
 
-Official references:
+### Applicability gate
 
-- [Hindsight documentation](https://docs.hindsight.vectorize.io/)
-- [Hindsight GitHub](https://github.com/vectorize-io/hindsight)
-- [Hindsight paper](https://arxiv.org/abs/2512.12818)
+Retrieving an experience is only the first step.
+
+ED Resolve combines:
+
+- bottleneck match
+- scenario match
+- operational graph context
+- semantic relevance
+
+into an **experience applicability signal**.
+
+![Experience applicability gate](docs/applicability-gate.svg)
+
+The key boundary is:
+
+> **Memory can influence a decision. Memory cannot override the current operating state.**
 
 ---
 
-## 5. Product Interface
+## 5. Further Demo: Making Hindsight Visible
+
+A central goal of the demo is to make Hindsight visibly change the evidence used by the agent rather than hiding memory behind a generic API call.
+
+The running interface exposes:
+
+**Recall → Validate → Influence → Learn**
+
+### Recall
+
+The system retrieves previous operational episodes from the ED Resolve Hindsight bank. These can include both successful and failed interventions.
+
+### Validate
+
+The retrieved experiences are compared with the current bottleneck, scenario, and operational state. Structurally aligned experience can receive bounded influence; structurally unseen experience can be suppressed.
+
+### Influence
+
+The applicable experience contributes a bounded experiential signal to the deterministic decision layer. Memory does not become a veto and cannot bypass the current-state constraints or simulation.
+
+### Learn
+
+After execution, the outcome is compared with what was expected. The resulting prediction error and lesson are retained for future episodes.
+
+### Memory Matters experiment
+
+The real Hindsight pipeline was verified with a controlled **Memory Matters** experiment. Tag-scoped recall recovered controlled experiences representing two failed `EXPEDITE_BED_CLEANING` episodes and two successful `ESCALATE_TO_BED_MANAGER` episodes. Historical support then changed the bounded decision scores for those actions.
+
+In the full simulator case used for verification, the current-state simulation still had a large utility advantage for `EXPEDITE_BED_CLEANING`, so the final action did not flip.
+
+This is intentional:
+
+> **Memory changes the ranking, but it cannot override strong current-world evidence.**
+
+A separate selector-only ablation can flip the final action when two options are sufficiently close, but that result is kept separate from the full simulator claim. ED Resolve therefore does **not** claim that Hindsight must change the final action on every end-to-end episode.
+
+![Familiar regime decision flow](docs/familiar-regime.svg)
+
+---
+
+## 6. Product Interface
 
 The dashboard is designed so a non-specialist can understand the objective first and then inspect the deeper decision layers.
-
-### Final dashboard
 
 ![ED Resolve final dashboard](docs/dashboard-final.png)
 
@@ -156,125 +198,125 @@ The final interface keeps the project identity visible throughout the demo:
 - **Counterfactual Simulation**
 - **Safe Mode**
 
-### Familiar regime: memory-informed decision
+### UI sections
 
-![Familiar regime decision](docs/familiar-decision.png)
+| UI section | What it explains |
+|---|---|
+| **Familiar Regime / Novel Regime** | Switches between a known operational regime and a deliberately unseen regime. |
+| **Hero / Objective** | Explains the core problem and the role of Hindsight in one place. |
+| **KPI row** | Shows ED boarding pressure, ICU/HDU capacity, dominant bottleneck, and memory applicability. |
+| **What ED Resolve actually does** | Gives the eight-step end-to-end decision loop in plain language. |
+| **Current World** | Shows the current scenario, bottleneck, graph dependency, critical path, and confidence. |
+| **Hindsight Memory** | Shows recalled experiences, structural matches, and the bounded experiential prior. |
+| **Decision Layer** | Shows the selected intervention or explains why autonomous action is withheld. |
+| **How Hindsight is used** | Makes Recall → Validate → Influence → Learn explicit. |
+| **Counterfactual Simulation** | Shows which candidate actions are feasible and what the simulator predicts. |
+| **What the system demonstrates** | Summarizes memory use, bounded influence, counterfactuals, and Safe Mode behavior. |
 
-The familiar regime shows the normal decision path: the current bottleneck is identified, relevant Hindsight experience is recalled, applicability is high, feasible interventions are evaluated, and a deterministic action is selected.
+### Plain-language pipeline
 
-### How Hindsight appears in the product
+```text
+1. Observe
+   Build the current ED / ICU / HDU state.
 
-![Hindsight panel](docs/hindsight-panel.png)
+2. Recall with Hindsight
+   Find previous resolution experiences.
 
-The UI exposes the four operational roles of Hindsight directly:
+3. Validate memory
+   Check whether those experiences fit this state.
 
-**Recall → Validate → Influence → Learn**
+4. Generate options
+   Propose possible operational interventions.
 
-This makes the memory system inspectable rather than hiding it behind a generic chat interface.
+5. Enforce constraints
+   Remove actions current resources cannot support.
 
-### Novel regime: safe autonomy boundary
+6. Simulate
+   Test remaining actions counterfactually.
 
-![Novel regime Safe Mode](docs/novel-safe-mode.png)
+7. Decide
+   A deterministic layer selects the feasible action.
 
-The novel regime demonstrates the opposite behavior. When the current state is structurally outside the supported experiential regime and no executable counterfactual pathway remains, ED Resolve withholds autonomous action and requests human review.
+8. Learn or abstain
+   Retain the outcome, or require human review in a novel regime.
+```
 
-## 6. Core Decision Flow
+---
+
+## 7. Core Decision Flow
 
 The complete operational loop is intentionally simple:
 
-```mermaid
-flowchart TD
-    A[Current ED state] --> B[World model]
-    B --> C[Bottleneck fingerprint]
-    C --> D[Hindsight recall]
-    D --> E[Applicability check]
-    E --> F[Candidate interventions]
-    F --> G[Hard constraints]
-    G --> H[Counterfactual simulation]
-    H --> I[Deterministic selection]
-    I --> J[Operational outcome]
-    J --> K[Expected vs actual]
-    K --> L[Hindsight retain]
-    L --> D
-```
+![ED Resolve decision loop](docs/end-to-end.svg)
 
-The division of authority is:
+### Authority separation
 
-```mermaid
-flowchart LR
-    A[GPT-OSS] --> B[Propose]
-    B --> C[CP-SAT constraints]
-    C --> D[Filter]
-    D --> E[SimPy]
-    E --> F[Evaluate]
-    F --> G[Deterministic selector]
-    G --> H[Action]
-```
+ED Resolve deliberately separates proposal, feasibility, evaluation, and selection.
+
+![Decision authority](docs/decision-authority.svg)
 
 **LLM proposes. Constraints filter. Simulation evaluates. Deterministic logic selects. Hindsight remembers.**
 
 ---
 
-## 7. Familiar Regime vs Novel Regime
+## 8. Familiar Regime vs Novel Regime
 
 ### Familiar regime
 
 A known operational pattern where relevant experiences exist.
 
-```mermaid
-flowchart LR
-    A[ICU/HDU transfer delay] --> B[BED_CLEANING bottleneck]
-    B --> C[Hindsight recall]
-    C --> D[High applicability]
-    D --> E[Feasible actions]
-    E --> F[Counterfactual simulation]
-    F --> G[EXPEDITE_BED_CLEANING]
+![Familiar regime decision flow](docs/familiar-regime.svg)
+
+A controlled synthetic episode can complete the full path:
+
+```text
+state
+ → graph-conditioned bottleneck
+ → Hindsight recall
+ → applicability validation
+ → candidate generation
+ → CP-SAT feasibility
+ → SimPy counterfactuals
+ → deterministic selection
+ → outcome comparison
+ → Hindsight retention
 ```
 
 ### Novel regime
 
 A deliberately unseen resource-collapse regime tests whether the system can **abstain** instead of overusing historical experience.
 
-```mermaid
-flowchart LR
-    A[Unseen regime] --> B[Recall available]
-    B --> C[Structural applicability = low]
-    C --> D[Historical prior disabled]
-    D --> E[No executable pathway]
-    E --> F[Safe Mode]
-    F --> G[Human review]
-```
+![Novel regime and Safe Mode](docs/novel-regime.svg)
 
-This is one of the important differences between **memory** and **safe experiential decision support**.
+The system may still retrieve memories, but structural alignment is absent. Historical influence is therefore suppressed.
+
+If the simulator finds no executable resolution pathway, ED Resolve enters **Safe Mode** and withholds autonomous action.
+
+The intended behavior is:
+
+> **When the current environment is outside the learned and executable regime, ED Resolve should be able to withhold autonomous action.**
 
 ---
 
-## 8. Initial Prototype
+## 9. Initial Prototype
 
 The first vertical slice proved the basic chain:
 
-```mermaid
-flowchart LR
-    A[Current state] --> B[Bottleneck]
-    B --> C[Hindsight recall]
-    C --> D[Candidate generation]
-    D --> E[Simulation]
-    E --> F[Decision]
-```
+![Initial prototype flow](docs/initial-prototype.svg)
 
-The prototype also exposed several weaknesses that shaped the final design:
+The early implementation exposed several weaknesses that shaped the final design:
 
-- retrieved experience could be relevant semantically but poorly aligned with the current operational state
-- graph context needed stronger treatment as a structural signal
-- an LLM can propose an intervention that current resources cannot execute
-- an unseen regime needs an explicit abstention path
-- memory can change evidence scores without necessarily changing the final action in every controlled case
+- retrieved experience could be relevant semantically but poorly aligned with the current operational state;
+- graph context needed stronger treatment as a structural signal;
+- an LLM can propose an intervention that current resources cannot execute;
+- an unseen regime needs an explicit abstention path;
+- memory can change evidence scores without necessarily changing the final action in every controlled case.
 
 These became engineering requirements rather than reasons to hide the early limitations.
 
 ---
 
-## 9. Initial Findings
+## 10. Initial Findings
 
 ### Memory ablation
 
@@ -288,93 +330,84 @@ A completed episode was retained in Hindsight and a later episode was able to re
 
 A known ICU bed-cleaning episode completed the full path:
 
-```mermaid
-flowchart LR
-    A[State] --> B[Graph bottleneck]
-    B --> C[Hindsight recall]
-    C --> D[Candidate actions]
-    D --> E[CP-SAT feasibility]
-    E --> F[SimPy counterfactuals]
-    F --> G[Deterministic selection]
-    G --> H[Outcome]
-    H --> I[Prediction error]
-    I --> J[Hindsight retain]
+```text
+State
+ → graph bottleneck
+ → Hindsight recall
+ → candidate actions
+ → CP-SAT feasibility
+ → SimPy counterfactuals
+ → deterministic selection
+ → outcome
+ → prediction error
+ → Hindsight retain
 ```
 
-A verified synthetic run produced an expected resolution time of about **48.7 minutes** and an observed simulation outcome of about **48.1 minutes**, giving a prediction error of about **0.6 minutes**. These figures belong to the synthetic operational simulator and are not clinical performance results.
+One verified synthetic run produced approximately **48.7 minutes expected resolution time** and **48.1 minutes observed simulation outcome**, for roughly **0.6 minutes of prediction error**. These values belong to the synthetic operational simulator and are not clinical performance claims.
+
+### Memory Matters: paired simulator search
+
+To test whether the real simulator could naturally produce an end-to-end memory-driven action flip without changing the simulator, a paired search was run across **500 simulator seeds** and the controlled scenario suite.
+
+No sufficiently close real counterfactual pair was found for a legitimate end-to-end flip. The closest observed utility gap was **20.125**.
+
+The simulator was therefore **not modified to manufacture a flip**. The honest result is that memory changes bounded ranking evidence while the current-state simulation can remain decisive.
 
 ---
 
-## 10. Final Architecture
+## 11. Final Architecture
 
 The final system separates state, memory, reasoning, feasibility, simulation, selection, and learning.
 
-```mermaid
-flowchart TD
-    A[Operational state] --> B[World model]
-    B --> C[Graph + bottleneck fingerprint]
-    C --> D[Hindsight recall]
-    D --> E[Applicability gate]
-    E --> F[GPT-OSS candidates]
-    F --> G[OR-Tools constraints]
-    G --> H[SimPy counterfactuals]
-    H --> I[Deterministic selector]
-    I --> J[Outcome]
-    J --> K[Prediction error]
-    K --> L[Hindsight retain]
-    L --> D
-
-    G --> M[Infeasible actions rejected]
-    H --> N[Expected consequences]
-    E --> O[Safe Mode when experience/pathway is not trustworthy]
-```
+![ED Resolve final architecture](docs/final-architecture.svg)
 
 ### Main components
 
-**Operational state**  
+**Operational state**
+
 Structured ED, ICU/HDU, transfer, cleaning, transport, coordination, and escalation variables.
 
-**World model**  
+**World model**
+
 Normalizes operational pressure, capacity, delay, resource conflict, graph criticality, dominant dependency, and critical path.
 
-**Bottleneck fingerprint**  
+**Bottleneck fingerprint**
+
 Creates a compact state representation that can condition memory and reasoning.
 
-**Hindsight memory**  
+**Hindsight memory**
+
 Provides long-term experiential recall and retention across episodes.
 
-**Applicability gate**  
+**Applicability gate**
+
 Controls how strongly recalled experience can influence the current decision based on semantic relevance plus structural alignment.
 
-**GPT-OSS**  
+**GPT-OSS**
+
 Generates candidate interventions and reasoning context; it does not directly select the final action.
 
-**OR-Tools CP-SAT**  
+**OR-Tools CP-SAT**
+
 Provides deterministic feasibility filtering for resource and operational constraints.
 
-**SimPy**  
+**SimPy**
+
 Runs counterfactual operational simulations for feasible interventions.
 
-**Deterministic selector**  
+**Deterministic selector**
+
 Chooses the final action from current-state constraints, simulation results, and bounded experiential evidence.
 
-**Safe Mode**  
+**Safe Mode**
+
 Withholds autonomous action when the current environment has no executable resolution pathway or the experiential regime is structurally unseen.
 
 ---
 
-## 11. Final Improvements Over the Initial Prototype
+## 12. Final Improvements Over the Initial Prototype
 
-```mermaid
-flowchart LR
-    A[Initial prototype] --> B[State-aware applicability]
-    B --> C[Graph-conditioned context]
-    C --> D[CP-SAT feasibility layer]
-    D --> E[Counterfactual simulation]
-    E --> F[Deterministic selection]
-    F --> G[Prediction-error retention]
-    G --> H[Safe Mode for unseen regimes]
-```
+![Final improvements](docs/final-improvements.svg)
 
 | Area | Initial prototype | Final vertical slice |
 |---|---|---|
@@ -389,22 +422,20 @@ flowchart LR
 
 ---
 
-## 12. Evaluation and Reproducibility
+## 13. Evaluation and Reproducibility
 
-The evaluation should isolate the contribution of memory rather than only reporting one final run.
+The evaluation is designed to isolate the contribution of memory rather than only reporting one final run.
 
-```mermaid
-flowchart LR
-    A[Stateless baseline] --> E[Compare]
-    B[Hindsight only] --> E
-    C[Hindsight + simulation] --> E
-    D[Full ED Resolve] --> E
-    E --> F[Resolution time]
-    E --> G[Boarding time]
-    E --> H[Prediction error]
-    E --> I[Memory reuse]
-    E --> J[Failed-action reuse]
-```
+![Evaluation strategy](docs/evaluation.svg)
+
+### Evaluation configurations
+
+| Configuration | Hindsight | Simulation | Learning |
+|---|---:|---:|---:|
+| Stateless baseline | No | No | No |
+| Memory system | Yes | No | No |
+| Memory + simulation | Yes | Yes | No |
+| Full ED Resolve | Yes | Yes | Yes |
 
 Useful metrics include:
 
@@ -417,27 +448,60 @@ Useful metrics include:
 - memory reuse
 - repeated failed-action rate
 - prediction error
+- learning gain
 
-Experiments use controlled synthetic scenarios and reproducible seeds. Synthetic results are for algorithm development and evaluation, not clinical effectiveness claims.
+Experiments use controlled synthetic scenarios and reproducible seeds. The Memory Matters paired search tested 500 simulator seeds and did not find a sufficiently close real counterfactual pair for a legitimate end-to-end action flip. No real-world clinical performance claim is inferred from these simulations.
 
 ---
 
-## 13. Repository Structure
+## 14. Repository Structure
 
 ```text
-ED Resolve/
+ED-Resolve/
 ├── backend/
 │   ├── agent/
+│   │   ├── decision.py
+│   │   ├── graph.py
+│   │   ├── nodes.py
+│   │   ├── outcome.py
+│   │   ├── prompts.py
+│   │   └── state.py
 │   ├── memory/
+│   │   └── hindsight_memory.py
 │   └── simulation/
+│       ├── actions.py
+│       ├── constraints.py
+│       ├── ed_simulator.py
+│       ├── metrics.py
+│       └── models.py
 ├── data/
 │   └── synthetic/
 ├── docs/
-│   └── dashboard-preview.png
+│   ├── dashboard-final.png
+│   ├── familiar-decision.png
+│   ├── hindsight-panel.png
+│   ├── novel-safe-mode.png
+│   ├── hindsight-loop.svg
+│   ├── applicability-gate.svg
+│   ├── end-to-end.svg
+│   ├── decision-authority.svg
+│   ├── decision-flow.svg
+│   ├── familiar-regime.svg
+│   ├── novel-regime.svg
+│   ├── initial-prototype.svg
+│   ├── final-architecture.svg
+│   ├── final-improvements.svg
+│   └── evaluation.svg
 ├── frontend/
 │   ├── server.py
 │   └── static/
+│       └── index.html
 ├── scripts/
+│   ├── cleanup_memory_matters.py
+│   ├── demo_evaluation.py
+│   ├── test_memory_flip.py
+│   ├── test_memory_matters_flip.py
+│   └── test_memory_pipeline.py
 ├── .env.example
 ├── .gitignore
 ├── README.md
@@ -446,9 +510,9 @@ ED Resolve/
 
 ---
 
-## 14. Safety and Scope
+## 15. Safety and Scope
 
-ED Resolve is an **operational decision-support research prototype**.
+ED Resolve is an **operational decision-support research prototype** using synthetic scenarios.
 
 It does not:
 
@@ -462,13 +526,16 @@ It does not:
 
 A real deployment would require domain-specific validation, privacy and security controls, interoperability validation, governance, human oversight, and appropriate regulatory assessment.
 
+The simulator and decision policies demonstrate the architecture and learning loop; they do not certify hospital safety or operational performance.
+
 ---
 
-## 15. Future Scope
+## 16. Future Scope
 
 The architecture can be extended toward:
 
 - PostgreSQL-backed episode and audit persistence
+- SQLAlchemy/Alembic database migrations and durable operational storage
 - PM4Py-based process-mining analysis
 - richer hospital event streams
 - larger intervention spaces
@@ -482,7 +549,7 @@ The intended direction is not simply to make the model remember more. It is to m
 
 ---
 
-## 16. Setup
+## 17. Setup
 
 ### Requirements
 
@@ -512,9 +579,11 @@ Open:
 http://127.0.0.1:8000
 ```
 
+The dashboard contains the **Familiar Regime** and **Novel Regime** synthetic scenarios used in the demo.
+
 ---
 
-## 17. References
+## 18. References
 
 1. [PubMed — Causes of Delayed Transfers From the Emergency Department to Speciality Units](https://pubmed.ncbi.nlm.nih.gov/42326213/)
 2. [PMC — Full study](https://pmc.ncbi.nlm.nih.gov/articles/PMC13275199/)
@@ -527,6 +596,11 @@ http://127.0.0.1:8000
 
 ---
 
-## Project principle
+## Project Principle
 
 > **Memory informs. Constraints protect. Simulation tests. Deterministic logic selects. Outcomes teach.**
+
+**GEOMETROGENESIS**
+**ED Resolve**
+
+> Building state-aware operational agents that use experiential memory without blindly trusting the past.

@@ -28,6 +28,15 @@ UTILITY_DELTA = 20.0
 
 COUNTERFACTUAL_SEED = 42
 
+# Bounded influence of state-aligned experiential evidence.
+#
+# Positive historical evidence lowers an action's adjusted score.
+# Negative historical evidence raises an action's adjusted score.
+#
+# Memory is still scaled by the applicability gate's prior_scale,
+# so LOW-applicability regimes receive no experiential influence.
+EXPERIENCE_PRIOR_WEIGHT = 0.35
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -332,8 +341,6 @@ def run_counterfactual_simulations(
 # 3. Experience-conditioned deterministic action selection
 # ---------------------------------------------------------------------------
 
-EXPERIENCE_PRIOR_WEIGHT = 0.15
-
 EXPERIENCE_ACTIONS = {
     "WAIT",
     "EXPEDITE_BED_CLEANING",
@@ -402,13 +409,23 @@ def _build_experience_support(
     memories: list[dict[str, Any]],
     actions: list[str],
 ) -> dict[str, float]:
+    """
+    Compute signed historical evidence for each action.
 
-    weighted_success: dict[str, float] = {
+    +1.0 -> strong historical success
+     0.0 -> no clear historical outcome evidence
+    -1.0 -> strong historical failure
+
+    The signal is bounded and later scaled by the
+    state-conditioned applicability prior.
+    """
+
+    weighted_signal: dict[str, float] = {
         action: 0.0
         for action in actions
     }
 
-    weighted_relevance: dict[str, float] = {
+    weighted_evidence: dict[str, float] = {
         action: 0.0
         for action in actions
     }
@@ -419,6 +436,20 @@ def _build_experience_support(
     }
 
     seen_documents: set[str] = set()
+
+    success_statuses = {
+        "resolved",
+        "success",
+        "successful",
+    }
+
+    failure_statuses = {
+        "failed",
+        "failure",
+        "unresolved",
+        "unsuccessful",
+        "timeout",
+    }
 
     for memory in memories:
 
@@ -453,6 +484,9 @@ def _build_experience_support(
                 ),
             )
         )
+
+        if not document_id:
+            continue
 
         if document_id in seen_documents:
             continue
@@ -517,7 +551,7 @@ def _build_experience_support(
             tags = []
 
         normalized_tags = {
-            str(tag).lower()
+            str(tag).strip().lower()
             for tag in tags
         }
 
@@ -526,26 +560,47 @@ def _build_experience_support(
                 "resolution_status",
                 "",
             )
-        ).lower()
+        ).strip().lower()
 
-        successful = (
-            resolution_status == "resolved"
-            or "successful"
-            in normalized_tags
-        )
+        # ---------------------------------------------------------------
+        # Explicit historical outcome classification
+        # ---------------------------------------------------------------
 
-        success_factor = (
-            1.0
-            if successful
-            else 0.25
-        )
+        if (
+            resolution_status in success_statuses
+            or normalized_tags.intersection(
+                {
+                    "success",
+                    "successful",
+                    "resolved",
+                }
+            )
+        ):
+            outcome_signal = 1.0
 
-        weighted_success[action] += (
+        elif (
+            resolution_status in failure_statuses
+            or normalized_tags.intersection(
+                {
+                    "failed",
+                    "failure",
+                    "unresolved",
+                    "unsuccessful",
+                    "timeout",
+                }
+            )
+        ):
+            outcome_signal = -1.0
+
+        else:
+            outcome_signal = 0.0
+
+        weighted_signal[action] += (
             relevance
-            * success_factor
+            * outcome_signal
         )
 
-        weighted_relevance[action] += (
+        weighted_evidence[action] += (
             relevance
         )
 
@@ -555,29 +610,30 @@ def _build_experience_support(
 
     for action in actions:
 
-        relevance_total = (
-            weighted_relevance[action]
-        )
+        evidence = weighted_evidence[action]
 
-        if relevance_total <= 0:
+        if evidence <= 0:
             support[action] = 0.0
             continue
 
-        quality = (
-            weighted_success[action]
-            / relevance_total
+        normalized_signal = (
+            weighted_signal[action]
+            / evidence
         )
 
+        # Repeated evidence becomes more trustworthy, but is
+        # capped after three relevant experiences.
         coverage = min(
             1.0,
             counts[action] / 3.0,
         )
 
         support[action] = max(
-            0.0,
+            -1.0,
             min(
                 1.0,
-                quality * coverage,
+                normalized_signal
+                * coverage,
             ),
         )
 
@@ -644,9 +700,11 @@ def select_action(
         )
     ).upper()
 
-    # In a LOW-applicability regime, WAIT is not treated as a
-    # meaningful autonomous resolution when it is the only
-    # feasible option. Withhold autonomy and require review.
+    # -------------------------------------------------------------------
+    # SAFE MODE 1:
+    # Low-applicability regime with only WAIT available.
+    # -------------------------------------------------------------------
+
     if (
         feasible_results
         and applicability_mode == "LOW"
@@ -694,7 +752,13 @@ def select_action(
             "error": None,
         }
 
+    # -------------------------------------------------------------------
+    # SAFE MODE 2:
+    # No feasible counterfactual pathway.
+    # -------------------------------------------------------------------
+
     if not feasible_results:
+
         constraint_feasible_count = sum(
             1
             for result in constraints
@@ -707,6 +771,7 @@ def select_action(
                 "found no executable resolution pathway."
             )
             failure_layer = "simulation"
+
         else:
             safe_reason = (
                 "No feasible intervention survived "
@@ -752,6 +817,10 @@ def select_action(
             "error": None,
         }
 
+    # -------------------------------------------------------------------
+    # Experience-conditioned deterministic selection
+    # -------------------------------------------------------------------
+
     feasible_actions = [
         result.action
         for result in feasible_results
@@ -763,6 +832,10 @@ def select_action(
             feasible_actions,
         )
     )
+
+    # -------------------------------------------------------------------
+    # Current-state simulation utility
+    # -------------------------------------------------------------------
 
     utilities = [
         float(
@@ -784,6 +857,28 @@ def select_action(
         - minimum_utility
     )
 
+    # -------------------------------------------------------------------
+    # Combined score
+    #
+    # Lower is better.
+    #
+    # Current simulation utility remains the base signal.
+    #
+    # Hindsight contributes a bounded adjustment:
+    #
+    #   positive historical support -> lower score
+    #   negative historical support -> higher score
+    #
+    # prior_scale comes from the applicability gate, meaning:
+    #
+    #   HIGH   -> full influence
+    #   MEDIUM -> partial influence
+    #   LOW    -> zero influence
+    #
+    # The memory term is deliberately bounded so Hindsight cannot
+    # blindly override a very large current-state simulation advantage.
+    # -------------------------------------------------------------------
+
     adjusted_scores: dict[str, float] = {}
 
     for result in feasible_results:
@@ -791,17 +886,6 @@ def select_action(
         utility = float(
             result.utility_score
         )
-
-        if utility_range <= 1e-9:
-
-            normalized_simulation_score = 0.0
-
-        else:
-
-            normalized_simulation_score = (
-                utility
-                - minimum_utility
-            ) / utility_range
 
         raw_support = experience_support.get(
             result.action,
@@ -813,21 +897,21 @@ def select_action(
             * prior_scale
         )
 
-        memory_penalty = (
+        memory_adjustment = (
             EXPERIENCE_PRIOR_WEIGHT
-            * (
-                1.0
-                - effective_support
-            )
+            * effective_support
+            * 10.0
         )
 
         adjusted_scores[result.action] = (
-            normalized_simulation_score
-            + memory_penalty
+            utility
+            - memory_adjustment
         )
 
-    # Current-state simulation remains dominant because
-    # memory contributes only a bounded normalized prior.
+    # -------------------------------------------------------------------
+    # Deterministic final selection
+    # -------------------------------------------------------------------
+
     selected = min(
         feasible_results,
         key=lambda result:
@@ -853,6 +937,10 @@ def select_action(
 
     rejected_actions: list[str] = []
 
+    # -------------------------------------------------------------------
+    # Hard-constraint rejections
+    # -------------------------------------------------------------------
+
     for constraint in constraints:
 
         if not constraint.feasible:
@@ -864,6 +952,10 @@ def select_action(
             rejected_actions.append(
                 f"{constraint.action}: {violations}"
             )
+
+    # -------------------------------------------------------------------
+    # Experience-adjusted alternative rejections
+    # -------------------------------------------------------------------
 
     for result in feasible_results:
 
@@ -877,6 +969,10 @@ def select_action(
             f"{adjusted_scores[selected_action]:.3f})"
         )
 
+    # -------------------------------------------------------------------
+    # Memory IDs directly attached to the selected candidate
+    # -------------------------------------------------------------------
+
     evidence_memory_ids: list[str] = []
 
     if selected_candidate is not None:
@@ -889,6 +985,10 @@ def select_action(
         selected_action,
         0.0,
     )
+
+    # -------------------------------------------------------------------
+    # Transparent explanation
+    # -------------------------------------------------------------------
 
     reason = (
         f"{selected_action} was selected using the lowest "
@@ -907,14 +1007,27 @@ def select_action(
 
     decision = DecisionRecord(
         selected_action=selected_action,
+
         selection_reason=reason,
+
         selected_utility=selected.utility_score,
-        alternatives_considered=alternatives_considered,
-        rejected_actions=rejected_actions,
-        memory_ids_used=evidence_memory_ids,
+
+        alternatives_considered=(
+            alternatives_considered
+        ),
+
+        rejected_actions=(
+            rejected_actions
+        ),
+
+        memory_ids_used=(
+            evidence_memory_ids
+        ),
+
         experience_applicability=(
             experience_applicability
         ),
+
         experience_support={
             action: round(
                 value,
@@ -923,6 +1036,7 @@ def select_action(
             for action, value
             in experience_support.items()
         },
+
         experience_adjusted_scores={
             action: round(
                 value,
@@ -931,6 +1045,7 @@ def select_action(
             for action, value
             in adjusted_scores.items()
         },
+
         simulation_results=[
             result.model_dump()
             for result in feasible_results
@@ -939,6 +1054,7 @@ def select_action(
 
     return {
         "decision": decision,
+
         "audit_log": [
             _audit(
                 stage="decision",
@@ -950,24 +1066,35 @@ def select_action(
                 ),
                 data={
                     "selected_action": selected_action,
-                    "selected_utility": selected.utility_score,
-                    "selected_adjusted_score": (
-                        adjusted_scores[selected_action]
+
+                    "selected_utility": (
+                        selected.utility_score
                     ),
+
+                    "selected_adjusted_score": (
+                        adjusted_scores[
+                            selected_action
+                        ]
+                    ),
+
                     "experience_applicability": (
                         experience_applicability
                     ),
+
                     "experience_support": (
                         experience_support
                     ),
+
                     "alternatives": (
                         alternatives_considered
                     ),
+
                     "memory_ids_used": (
                         evidence_memory_ids
                     ),
                 },
             )
         ],
+
         "error": None,
     }

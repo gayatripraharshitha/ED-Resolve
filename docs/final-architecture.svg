@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2175" height="364" viewBox="0 0 2175 364">
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#7567f7"/></marker></defs>
+<rect width="100%" height="100%" fill="#07101c" rx="16"/>
+<text x="25" y="30" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="16" font-weight="700">Final Architecture</text>
+<line x1="153" y1="118.0" x2="171" y2="118.0" stroke="#7567f7" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="299" y1="118.0" x2="317" y2="118.0" stroke="#7567f7" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="445" y1="118.0" x2="463" y2="118.0" stroke="#7567f7" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="591" y1="118.0" x2="609" y2="118.0" stroke="#7567f7" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="737" y1="118.0" x2="755" y2="118.0" stroke="#7567f7" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="883" y1="118.0" x2="901" y2="118.0" stroke="#7567f7" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="1029" y1="118.0" x2="1047" y2="118.0" stroke="#7567f7" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="1175" y1="118.0" x2="1193" y2="118.0" stroke="#7567f7" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="1321" y1="118.0" x2="1339" y2="118.0" stroke="#7567f7" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="1467" y1="118.0" x2="1485" y2="118.0" stroke="#7567f7" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="1613" y1="118.0" x2="1631" y2="118.0" stroke="#7567f7" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="1759" y1="118.0" x2="463" y2="118.0" stroke="#7567f7" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="1029" y1="118.0" x2="1777" y2="118.0" stroke="#7567f7" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="1175" y1="118.0" x2="1923" y2="118.0" stroke="#7567f7" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="737" y1="118.0" x2="317" y2="298.0" stroke="#7567f7" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="25" y="92" width="128" height="52" rx="10" fill="#111e31" stroke="#24344b"/>
+<text x="89.0" y="114" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">Operational state</text>
+<rect x="171" y="92" width="128" height="52" rx="10" fill="#111e31" stroke="#24344b"/>
+<text x="235.0" y="114" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">World model</text>
+<rect x="317" y="92" width="128" height="52" rx="10" fill="#111e31" stroke="#24344b"/>
+<text x="381.0" y="107" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">Graph + bottleneck</text>
+<text x="381.0" y="121" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">fingerprint</text>
+<rect x="463" y="92" width="128" height="52" rx="10" fill="#111e31" stroke="#24344b"/>
+<text x="527.0" y="114" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">Hindsight recall</text>
+<rect x="609" y="92" width="128" height="52" rx="10" fill="#111e31" stroke="#24344b"/>
+<text x="673.0" y="114" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">Applicability gate</text>
+<rect x="755" y="92" width="128" height="52" rx="10" fill="#111e31" stroke="#24344b"/>
+<text x="819.0" y="114" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">GPT-OSS candidates</text>
+<rect x="901" y="92" width="128" height="52" rx="10" fill="#111e31" stroke="#24344b"/>
+<text x="965.0" y="107" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">OR-Tools</text>
+<text x="965.0" y="121" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">constraints</text>
+<rect x="1047" y="92" width="128" height="52" rx="10" fill="#111e31" stroke="#24344b"/>
+<text x="1111.0" y="107" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">SimPy</text>
+<text x="1111.0" y="121" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">counterfactuals</text>
+<rect x="1193" y="92" width="128" height="52" rx="10" fill="#111e31" stroke="#24344b"/>
+<text x="1257.0" y="107" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">Deterministic</text>
+<text x="1257.0" y="121" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">selector</text>
+<rect x="1339" y="92" width="128" height="52" rx="10" fill="#111e31" stroke="#24344b"/>
+<text x="1403.0" y="114" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">Outcome</text>
+<rect x="1485" y="92" width="128" height="52" rx="10" fill="#111e31" stroke="#24344b"/>
+<text x="1549.0" y="114" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">Prediction error</text>
+<rect x="1631" y="92" width="128" height="52" rx="10" fill="#111e31" stroke="#24344b"/>
+<text x="1695.0" y="114" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">Hindsight retain</text>
+<rect x="1777" y="92" width="128" height="52" rx="10" fill="#111e31" stroke="#24344b"/>
+<text x="1841.0" y="107" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">Infeasible actions</text>
+<text x="1841.0" y="121" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">rejected</text>
+<rect x="1923" y="92" width="128" height="52" rx="10" fill="#111e31" stroke="#24344b"/>
+<text x="1987.0" y="107" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">Expected</text>
+<text x="1987.0" y="121" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">consequences</text>
+<rect x="317" y="272" width="128" height="52" rx="10" fill="#111e31" stroke="#24344b"/>
+<text x="381.0" y="280" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">Safe Mode when</text>
+<text x="381.0" y="294" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">experience/pathway</text>
+<text x="381.0" y="308" text-anchor="middle" fill="#f7f9fc" font-family="Arial,sans-serif" font-size="9" font-weight="600">is not trustworthy</text>
+</svg>
